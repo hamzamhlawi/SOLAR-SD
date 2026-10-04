@@ -1,16 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 /// ===============================================================
-/// Sudan SO
-/// Solar Energy Calculator + Solar Market
-/// API Connected Version
+/// SUDAN SO
+/// Solar Energy Calculator + Solar Brands Market
 /// ===============================================================
-
-const String apiBaseUrl = 'http://192.168.1.100:8000';
-// مثال:
-// const String apiBaseUrl = 'http://10.0.2.2:8000';
 
 void main() {
   runApp(const SudanSOApp());
@@ -108,155 +101,6 @@ double standardInverterSize(double kw) {
   }
 
   return (kw / 5).ceil() * 5;
-}
-
-// ===============================================================
-// API PRODUCT MODEL
-// ===============================================================
-
-class Product {
-  final int id;
-  final String brand;
-  final String category;
-  final String model;
-  final String specification;
-  final double? price;
-  final String source;
-  final String note;
-  final DateTime? checkedAt;
-  final bool available;
-
-  const Product({
-    required this.id,
-    required this.brand,
-    required this.category,
-    required this.model,
-    required this.specification,
-    required this.price,
-    required this.source,
-    required this.note,
-    required this.checkedAt,
-    required this.available,
-  });
-
-  factory Product.fromJson(Map<String, dynamic> json) {
-    final priceData =
-        json['price'] is Map ? Map<String, dynamic>.from(json['price']) : null;
-
-    final categoryRaw =
-        json['category']?.toString().toLowerCase() ?? '';
-
-    String category;
-
-    switch (categoryRaw) {
-      case 'inverter':
-        category = 'إنفرترات';
-        break;
-      case 'battery':
-        category = 'بطاريات';
-        break;
-      case 'panel':
-        category = 'ألواح';
-        break;
-      default:
-        category = json['category']?.toString() ?? 'أخرى';
-    }
-
-    final rawPrice = priceData?['price'];
-
-    double? price;
-
-    if (rawPrice is num) {
-      price = rawPrice.toDouble();
-    } else if (rawPrice != null) {
-      price = double.tryParse(rawPrice.toString());
-    }
-
-    DateTime? checkedAt;
-
-    final checked = priceData?['checked_at'];
-
-    if (checked != null) {
-      checkedAt = DateTime.tryParse(checked.toString());
-    }
-
-    String source = '';
-
-    final sourceType = priceData?['source_type']?.toString() ?? '';
-
-    switch (sourceType) {
-      case 'official':
-      case 'official_portal':
-        source = 'المصدر الرسمي';
-        break;
-      case 'official_store':
-        source = 'المتجر الرسمي';
-        break;
-      case 'authorized_distributor':
-        source = 'موزع معتمد';
-        break;
-      case 'reference':
-      case 'manual_reference':
-        source = 'سعر مرجعي';
-        break;
-      default:
-        source = priceData?['source_note']?.toString() ?? '';
-    }
-
-    return Product(
-      id: (json['id'] as num?)?.toInt() ?? 0,
-      brand: json['brand']?.toString() ?? '',
-      category: category,
-      model: json['model']?.toString() ?? '',
-      specification: json['name']?.toString() ??
-          json['specification']?.toString() ??
-          '',
-      price: price,
-      source: source,
-      note: priceData?['source_note']?.toString() ?? '',
-      checkedAt: checkedAt,
-      available: priceData?['available'] == true,
-    );
-  }
-}
-
-// ===============================================================
-// API SERVICE
-// ===============================================================
-
-class PriceApiService {
-  static Future<List<Product>> fetchProducts() async {
-    final uri = Uri.parse('$apiBaseUrl/api/v1/products');
-
-    final response = await http
-        .get(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-          },
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'API Error: ${response.statusCode}',
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-
-    if (decoded is! List) {
-      throw Exception('صيغة البيانات غير صحيحة');
-    }
-
-    return decoded
-        .map(
-          (item) => Product.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
-        )
-        .toList();
-  }
 }
 
 // ===============================================================
@@ -379,14 +223,17 @@ class HomeDashboard extends StatelessWidget {
               ],
             ),
           ),
+
           const SizedBox(height: 20),
+
           _homeCard(
             context,
             icon: Icons.calculate,
             title: 'حاسبة الطاقة الشمسية',
-            subtitle: 'احسب الألواح والبطاريات والإنفرتر',
+            subtitle: 'احسب الأحمال والبطاريات والألواح والإنفرتر',
             page: const CalculatorPage(),
           ),
+
           _homeCard(
             context,
             icon: Icons.battery_charging_full,
@@ -394,6 +241,7 @@ class HomeDashboard extends StatelessWidget {
             subtitle: 'احسب السعة المطلوبة بالأمبير ساعة',
             page: const BatteryCalculatorPage(),
           ),
+
           _homeCard(
             context,
             icon: Icons.electric_bolt,
@@ -401,12 +249,49 @@ class HomeDashboard extends StatelessWidget {
             subtitle: 'حدد قدرة الإنفرتر المناسبة',
             page: const InverterCalculatorPage(),
           ),
+
           _homeCard(
             context,
             icon: Icons.solar_power_outlined,
             title: 'حاسبة الألواح',
             subtitle: 'احسب عدد الألواح المطلوبة',
             page: const PanelCalculatorPage(),
+          ),
+
+          const SizedBox(height: 8),
+
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(14),
+              leading: CircleAvatar(
+                radius: 26,
+                backgroundColor: Colors.green.shade100,
+                child: Icon(
+                  Icons.storefront,
+                  color: Colors.green.shade800,
+                ),
+              ),
+              title: const Text(
+                'سوق البراندات',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: const Text(
+                'تصفح منتجات أشهر شركات الطاقة الشمسية',
+              ),
+              trailing: const Icon(
+                Icons.arrow_back_ios_new,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MarketPage(),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -440,11 +325,15 @@ class HomeDashboard extends StatelessWidget {
           ),
         ),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_back_ios_new),
+        trailing: const Icon(
+          Icons.arrow_back_ios_new,
+        ),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => page),
+            MaterialPageRoute(
+              builder: (_) => page,
+            ),
           );
         },
       ),
@@ -475,6 +364,7 @@ class CalculatorPage extends StatelessWidget {
             'الأحمال + البطاريات + الألواح + الإنفرتر',
             const FullSystemCalculatorPage(),
           ),
+
           _calcTile(
             context,
             Icons.battery_full,
@@ -482,6 +372,7 @@ class CalculatorPage extends StatelessWidget {
             'حساب Ah و kWh',
             const BatteryCalculatorPage(),
           ),
+
           _calcTile(
             context,
             Icons.electric_bolt,
@@ -489,6 +380,7 @@ class CalculatorPage extends StatelessWidget {
             'حساب قدرة الإنفرتر',
             const InverterCalculatorPage(),
           ),
+
           _calcTile(
             context,
             Icons.solar_power,
@@ -510,17 +402,26 @@ class CalculatorPage extends StatelessWidget {
   ) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: Colors.green.shade700),
+        leading: Icon(
+          icon,
+          color: Colors.green.shade700,
+        ),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_back_ios_new),
+        trailing: const Icon(
+          Icons.arrow_back_ios_new,
+        ),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => page),
+            MaterialPageRoute(
+              builder: (_) => page,
+            ),
           );
         },
       ),
@@ -536,6 +437,7 @@ class Appliance {
   final String id;
   final String name;
   final double watts;
+
   double quantity;
   double hours;
 
@@ -627,94 +529,231 @@ class FullSystemCalculatorPage extends StatefulWidget {
 
 class _FullSystemCalculatorPageState
     extends State<FullSystemCalculatorPage> {
-  final sunController = TextEditingController(text: '5.5');
-  final pvPerformanceController = TextEditingController(text: '80');
-  final voltageController = TextEditingController(text: '48');
-  final dodController = TextEditingController(text: '80');
-  final efficiencyController = TextEditingController(text: '92');
-  final autonomyController = TextEditingController(text: '8');
-  final panelController = TextEditingController(text: '550');
-  final batteryController = TextEditingController(text: '5.12');
-  final inverterMarginController = TextEditingController(text: '25');
+  final sunController =
+      TextEditingController(text: '5.5');
 
-  List<Appliance> appliances = defaultAppliances();
+  final pvPerformanceController =
+      TextEditingController(text: '80');
+
+  final voltageController =
+      TextEditingController(text: '48');
+
+  final dodController =
+      TextEditingController(text: '80');
+
+  final efficiencyController =
+      TextEditingController(text: '92');
+
+  final autonomyController =
+      TextEditingController(text: '8');
+
+  final panelController =
+      TextEditingController(text: '550');
+
+  final batteryController =
+      TextEditingController(text: '5.12');
+
+  final inverterMarginController =
+      TextEditingController(text: '25');
+
+  final backupLoadController =
+      TextEditingController(text: '0');
+
+  List<Appliance> appliances =
+      defaultAppliances();
 
   double dailyEnergy = 0;
   double peakLoad = 0;
+  double averageLoad = 0;
+  double backupLoad = 0;
+
   double recommendedInverter = 0;
+  double inverterRequiredRaw = 0;
+
   double requiredPvKw = 0;
   int numberOfPanels = 0;
+
   double requiredBatteryKwh = 0;
   double requiredBatteryAh = 0;
   int batteryModules = 0;
 
   bool calculated = false;
+  String? errorMessage;
+
+  // =============================================================
+  // CALCULATE
+  // =============================================================
 
   void calculate() {
     double energy = 0;
     double peak = 0;
 
     for (final item in appliances) {
-      energy += item.watts * item.quantity * item.hours;
-      peak += item.watts * item.quantity;
+      final quantity =
+          item.quantity < 0 ? 0 : item.quantity;
+
+      final hours =
+          item.hours < 0 ? 0 : item.hours;
+
+      final validHours =
+          hours > 24 ? 24 : hours;
+
+      energy +=
+          item.watts *
+          quantity *
+          validHours;
+
+      peak +=
+          item.watts *
+          quantity;
     }
 
-    final sun = parseNumber(sunController.text);
-    final pvPerformance =
-        parseNumber(pvPerformanceController.text) / 100;
-    final voltage = parseNumber(voltageController.text);
-    final dod = parseNumber(dodController.text) / 100;
-    final efficiency =
-        parseNumber(efficiencyController.text) / 100;
-    final autonomy = parseNumber(autonomyController.text);
-    final panelW = parseNumber(panelController.text);
-    final batteryKwh = parseNumber(batteryController.text);
-    final margin =
-        parseNumber(inverterMarginController.text) / 100;
+    final sun =
+        parseNumber(sunController.text);
 
-    if (sun <= 0 ||
-        pvPerformance <= 0 ||
-        voltage <= 0 ||
-        dod <= 0 ||
-        efficiency <= 0 ||
-        panelW <= 0 ||
-        batteryKwh <= 0) {
+    final pvPerformance =
+        parseNumber(
+              pvPerformanceController.text,
+            ) /
+            100;
+
+    final voltage =
+        parseNumber(
+          voltageController.text,
+        );
+
+    final dod =
+        parseNumber(
+              dodController.text,
+            ) /
+            100;
+
+    final efficiency =
+        parseNumber(
+              efficiencyController.text,
+            ) /
+            100;
+
+    final autonomy =
+        parseNumber(
+          autonomyController.text,
+        );
+
+    final panelW =
+        parseNumber(
+          panelController.text,
+        );
+
+    final batteryKwh =
+        parseNumber(
+          batteryController.text,
+        );
+
+    final margin =
+        parseNumber(
+              inverterMarginController.text,
+            ) /
+            100;
+
+    final enteredBackupLoad =
+        parseNumber(
+          backupLoadController.text,
+        );
+
+    if (energy <= 0 || peak <= 0) {
+      setState(() {
+        errorMessage =
+            'أدخل عدد الأجهزة وساعات التشغيل لجهاز واحد على الأقل.';
+        calculated = false;
+      });
       return;
     }
 
-    final rawInverterKw = peak * (1 + margin) / 1000;
+    if (sun <= 0 ||
+        pvPerformance <= 0 ||
+        pvPerformance > 1 ||
+        voltage <= 0 ||
+        dod <= 0 ||
+        dod > 1 ||
+        efficiency <= 0 ||
+        efficiency > 1 ||
+        autonomy <= 0 ||
+        autonomy > 24 ||
+        panelW <= 0 ||
+        batteryKwh <= 0 ||
+        margin < 0) {
+      setState(() {
+        errorMessage =
+            'راجع إعدادات النظام. توجد قيمة غير صحيحة.';
+        calculated = false;
+      });
+      return;
+    }
 
-    final averageLoadW = energy / 24;
+    final calculatedAverageLoad =
+        energy / 24;
+
+    final calculatedBackupLoad =
+        enteredBackupLoad > 0
+            ? enteredBackupLoad
+            : calculatedAverageLoad;
+
+    final rawInverterKw =
+        peak *
+        (1 + margin) /
+        1000;
+
+    final selectedInverter =
+        standardInverterSize(
+          rawInverterKw,
+        );
+
+    final backupEnergyWh =
+        calculatedBackupLoad *
+        autonomy;
 
     final requiredBattery =
-        (averageLoadW * autonomy) /
-            (dod * efficiency) /
-            1000;
+        backupEnergyWh /
+        dod /
+        efficiency /
+        1000;
 
     final batteryAh =
-        requiredBattery * 1000 / voltage;
+        requiredBattery *
+        1000 /
+        voltage;
 
     final pvKw =
         energy /
-            (sun * pvPerformance) /
-            1000;
+        (sun * pvPerformance) /
+        1000;
 
     final panels =
         (pvKw * 1000 / panelW).ceil();
 
     final modules =
-        (requiredBattery / batteryKwh).ceil();
+        (requiredBattery /
+                batteryKwh)
+            .ceil();
 
     setState(() {
+      errorMessage = null;
+
       dailyEnergy = energy;
       peakLoad = peak;
-      recommendedInverter =
-          standardInverterSize(rawInverterKw);
+      averageLoad = calculatedAverageLoad;
+      backupLoad = calculatedBackupLoad;
+
+      inverterRequiredRaw = rawInverterKw;
+      recommendedInverter = selectedInverter;
+
       requiredPvKw = pvKw;
       numberOfPanels = panels;
+
       requiredBatteryKwh = requiredBattery;
       requiredBatteryAh = batteryAh;
       batteryModules = modules;
+
       calculated = true;
     });
   }
@@ -730,6 +769,8 @@ class _FullSystemCalculatorPageState
     panelController.dispose();
     batteryController.dispose();
     inverterMarginController.dispose();
+    backupLoadController.dispose();
+
     super.dispose();
   }
 
@@ -737,7 +778,9 @@ class _FullSystemCalculatorPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حساب النظام الكامل'),
+        title: const Text(
+          'حساب النظام الكامل',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -749,7 +792,18 @@ class _FullSystemCalculatorPageState
               fontWeight: FontWeight.bold,
             ),
           ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            'أدخل عدد كل جهاز وساعات تشغيله الفعلية في اليوم.',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+            ),
+          ),
+
           const SizedBox(height: 10),
+
           ...appliances.map(
             (item) => ApplianceEditor(
               appliance: item,
@@ -758,7 +812,9 @@ class _FullSystemCalculatorPageState
               },
             ),
           ),
+
           const SizedBox(height: 20),
+
           const Text(
             'إعدادات النظام',
             style: TextStyle(
@@ -766,58 +822,140 @@ class _FullSystemCalculatorPageState
               fontWeight: FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 10),
+
           _numberField(
             sunController,
             'ساعات الشمس الفعالة',
             'ساعة',
           ),
+
           _numberField(
             pvPerformanceController,
             'كفاءة منظومة الألواح',
             '%',
           ),
+
           _numberField(
             voltageController,
             'جهد البطارية',
             'V',
           ),
+
           _numberField(
             dodController,
-            'Depth of Discharge',
+            'عمق التفريغ DoD',
             '%',
           ),
+
           _numberField(
             efficiencyController,
             'كفاءة البطارية',
             '%',
           ),
+
           _numberField(
             autonomyController,
             'مدة الاحتياط',
             'ساعة',
           ),
+
           _numberField(
             panelController,
             'قدرة اللوح',
             'W',
           ),
+
           _numberField(
             batteryController,
-            'حجم البطارية',
+            'حجم البطارية الواحدة',
             'kWh',
           ),
+
           _numberField(
             inverterMarginController,
             'هامش أمان الإنفرتر',
             '%',
           ),
-          const SizedBox(height: 15),
-          FilledButton.icon(
-            onPressed: calculate,
-            icon: const Icon(Icons.calculate),
-            label: const Text('احسب النظام'),
+
+          _numberField(
+            backupLoadController,
+            'حمل فترة الاحتياط',
+            'W',
           ),
+
+          Card(
+            color: Colors.blue.shade50,
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'حمل فترة الاحتياط هو الحمل الذي تريد تشغيله أثناء الليل أو انقطاع الكهرباء. '
+                      'مثال: إذا كان الحمل الليلي 800 W أدخل 800. '
+                      'إذا تركته 0 سيستخدم التطبيق متوسط الحمل اليومي تلقائياً.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: calculate,
+              icon: const Icon(
+                Icons.calculate,
+              ),
+              label: const Text(
+                'احسب النظام',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          if (errorMessage != null) ...[
+            const SizedBox(height: 15),
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           if (calculated) ...[
             const SizedBox(height: 20),
             _resultCard(),
@@ -836,7 +974,8 @@ class _FullSystemCalculatorPageState
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(
+        keyboardType:
+            const TextInputType.numberWithOptions(
           decimal: true,
         ),
         decoration: InputDecoration(
@@ -850,7 +989,7 @@ class _FullSystemCalculatorPageState
 
   Widget _resultCard() {
     return Card(
-      elevation: 2,
+      elevation: 3,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -858,42 +997,118 @@ class _FullSystemCalculatorPageState
             const Text(
               'نتيجة التصميم',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 23,
                 fontWeight: FontWeight.bold,
               ),
             ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              'الحسابات مبنية على البيانات التي أدخلتها',
+              style: TextStyle(
+                color: Colors.grey.shade700,
+              ),
+            ),
+
             const SizedBox(height: 15),
+
+            _sectionTitle('الأحمال'),
+
             _resultRow(
               'الاستهلاك اليومي',
               '${formatNumber(dailyEnergy / 1000)} kWh/day',
             ),
+
+            _resultRow(
+              'متوسط الحمل',
+              '${formatNumber(averageLoad / 1000)} kW',
+            ),
+
             _resultRow(
               'الحمل الأقصى',
               '${formatNumber(peakLoad / 1000)} kW',
             ),
+
+            _resultRow(
+              'حمل فترة الاحتياط',
+              '${formatNumber(backupLoad / 1000)} kW',
+            ),
+
+            const SizedBox(height: 10),
+
+            _sectionTitle('الإنفرتر'),
+
+            _resultRow(
+              'القدرة المطلوبة قبل التقريب',
+              '${formatNumber(inverterRequiredRaw)} kW',
+            ),
+
             _resultRow(
               'الإنفرتر المقترح',
               '${formatNumber(recommendedInverter)} kW',
             ),
+
+            const SizedBox(height: 10),
+
+            _sectionTitle('الألواح الشمسية'),
+
             _resultRow(
-              'قدرة الألواح',
+              'قدرة الألواح المطلوبة',
               '${formatNumber(requiredPvKw)} kWp',
             ),
+
             _resultRow(
               'عدد الألواح',
               '$numberOfPanels لوح',
             ),
+
+            const SizedBox(height: 10),
+
+            _sectionTitle('البطاريات'),
+
             _resultRow(
-              'البطارية المطلوبة',
+              'الطاقة الاسمية المطلوبة',
               '${formatNumber(requiredBatteryKwh)} kWh',
             ),
+
             _resultRow(
-              'سعة البطارية',
+              'السعة المطلوبة',
               '${formatNumber(requiredBatteryAh)} Ah',
             ),
+
             _resultRow(
               'عدد البطاريات',
               '$batteryModules بطارية',
+            ),
+
+            const SizedBox(height: 15),
+
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius:
+                    BorderRadius.circular(12),
+              ),
+              child: const Row(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'الحمل الأقصى يستخدم لتحديد الإنفرتر، '
+                      'الاستهلاك اليومي يستخدم لتحديد الألواح، '
+                      'وحمل فترة الاحتياط يستخدم لتحديد البطارية.',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -901,7 +1116,27 @@ class _FullSystemCalculatorPageState
     );
   }
 
-  Widget _resultRow(String title, String value) {
+  Widget _sectionTitle(String title) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 5),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: Colors.green.shade800,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _resultRow(
+    String title,
+    String value,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(
         vertical: 12,
@@ -914,11 +1149,16 @@ class _FullSystemCalculatorPageState
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
         children: [
-          Text(title),
+          Expanded(
+            child: Text(title),
+          ),
+          const SizedBox(width: 10),
           Text(
             value,
+            textAlign: TextAlign.left,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.green,
@@ -949,7 +1189,8 @@ class ApplianceEditor extends StatefulWidget {
       _ApplianceEditorState();
 }
 
-class _ApplianceEditorState extends State<ApplianceEditor> {
+class _ApplianceEditorState
+    extends State<ApplianceEditor> {
   late TextEditingController quantityController;
   late TextEditingController hoursController;
 
@@ -957,16 +1198,24 @@ class _ApplianceEditorState extends State<ApplianceEditor> {
   void initState() {
     super.initState();
 
-    quantityController = TextEditingController(
-      text: widget.appliance.quantity == 0
-          ? ''
-          : formatNumber(widget.appliance.quantity),
+    quantityController =
+        TextEditingController(
+      text:
+          widget.appliance.quantity == 0
+              ? ''
+              : formatNumber(
+                  widget.appliance.quantity,
+                ),
     );
 
-    hoursController = TextEditingController(
-      text: widget.appliance.hours == 0
-          ? ''
-          : formatNumber(widget.appliance.hours),
+    hoursController =
+        TextEditingController(
+      text:
+          widget.appliance.hours == 0
+              ? ''
+              : formatNumber(
+                  widget.appliance.hours,
+                ),
     );
   }
 
@@ -979,10 +1228,14 @@ class _ApplianceEditorState extends State<ApplianceEditor> {
 
   void update() {
     widget.appliance.quantity =
-        parseNumber(quantityController.text);
+        parseNumber(
+      quantityController.text,
+    );
 
     widget.appliance.hours =
-        parseNumber(hoursController.text);
+        parseNumber(
+      hoursController.text,
+    );
 
     widget.onChanged();
   }
@@ -994,7 +1247,8 @@ class _ApplianceEditorState extends State<ApplianceEditor> {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -1007,44 +1261,67 @@ class _ApplianceEditorState extends State<ApplianceEditor> {
                     ),
                   ),
                 ),
-                Text(
-                  '${formatNumber(widget.appliance.watts)} W',
-                  style: TextStyle(
-                    color: Colors.green.shade700,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius:
+                        BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${formatNumber(widget.appliance.watts)} W',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 8),
+
             Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: quantityController,
+                    controller:
+                        quantityController,
                     onChanged: (_) => update(),
                     keyboardType:
                         const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
+                    decoration:
+                        const InputDecoration(
                       labelText: 'العدد',
+                      hintText: 'مثال: 2',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 8),
+
                 Expanded(
                   child: TextField(
-                    controller: hoursController,
+                    controller:
+                        hoursController,
                     onChanged: (_) => update(),
                     keyboardType:
                         const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'ساعات التشغيل/اليوم',
+                    decoration:
+                        const InputDecoration(
+                      labelText:
+                          'ساعات التشغيل/اليوم',
+                      hintText: 'مثال: 8',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
@@ -1063,8 +1340,11 @@ class _ApplianceEditorState extends State<ApplianceEditor> {
 // BATTERY CALCULATOR
 // ===============================================================
 
-class BatteryCalculatorPage extends StatefulWidget {
-  const BatteryCalculatorPage({super.key});
+class BatteryCalculatorPage
+    extends StatefulWidget {
+  const BatteryCalculatorPage({
+    super.key,
+  });
 
   @override
   State<BatteryCalculatorPage> createState() =>
@@ -1073,12 +1353,18 @@ class BatteryCalculatorPage extends StatefulWidget {
 
 class _BatteryCalculatorPageState
     extends State<BatteryCalculatorPage> {
-  final loadController = TextEditingController();
-  final hoursController = TextEditingController();
+  final loadController =
+      TextEditingController();
+
+  final hoursController =
+      TextEditingController();
+
   final voltageController =
       TextEditingController(text: '48');
+
   final dodController =
       TextEditingController(text: '80');
+
   final efficiencyController =
       TextEditingController(text: '92');
 
@@ -1088,25 +1374,47 @@ class _BatteryCalculatorPageState
   double? requiredKwh;
 
   void calculate() {
-    final load = parseNumber(loadController.text);
-    final hours = parseNumber(hoursController.text);
-    final voltage = parseNumber(voltageController.text);
+    final load =
+        parseNumber(loadController.text);
+
+    final hours =
+        parseNumber(hoursController.text);
+
+    final voltage =
+        parseNumber(
+          voltageController.text,
+        );
+
     final dod =
-        parseNumber(dodController.text) / 100;
+        parseNumber(
+              dodController.text,
+            ) /
+            100;
+
     final efficiency =
-        parseNumber(efficiencyController.text) / 100;
+        parseNumber(
+              efficiencyController.text,
+            ) /
+            100;
 
     if (load <= 0 ||
         hours <= 0 ||
         voltage <= 0 ||
         dod <= 0 ||
-        efficiency <= 0) {
+        efficiency <= 0 ||
+        dod > 1 ||
+        efficiency > 1) {
       return;
     }
 
-    final wh = load * hours;
-    final reqWh = wh / dod / efficiency;
-    final ah = reqWh / voltage;
+    final wh =
+        load * hours;
+
+    final reqWh =
+        wh / dod / efficiency;
+
+    final ah =
+        reqWh / voltage;
 
     setState(() {
       energy = wh;
@@ -1130,7 +1438,9 @@ class _BatteryCalculatorPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حاسبة البطارية'),
+        title: const Text(
+          'حاسبة البطارية',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -1160,21 +1470,27 @@ class _BatteryCalculatorPageState
             'كفاءة البطارية',
             '%',
           ),
+
           const SizedBox(height: 10),
+
           FilledButton(
             onPressed: calculate,
             child: const Text('احسب'),
           ),
+
           if (requiredAh != null) ...[
             const SizedBox(height: 20),
+
             _resultBox(
               'الطاقة المطلوبة',
               '${formatNumber(energy! / 1000)} kWh',
             ),
+
             _resultBox(
               'السعة الاسمية المطلوبة',
               '${formatNumber(requiredKwh!)} kWh',
             ),
+
             _resultBox(
               'السعة المطلوبة',
               '${formatNumber(requiredAh!)} Ah',
@@ -1191,7 +1507,9 @@ class _BatteryCalculatorPageState
     String suffix,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(
+        bottom: 10,
+      ),
       child: TextField(
         controller: controller,
         keyboardType:
@@ -1207,7 +1525,10 @@ class _BatteryCalculatorPageState
     );
   }
 
-  Widget _resultBox(String title, String value) {
+  Widget _resultBox(
+    String title,
+    String value,
+  ) {
     return Card(
       child: ListTile(
         title: Text(title),
@@ -1227,8 +1548,11 @@ class _BatteryCalculatorPageState
 // INVERTER CALCULATOR
 // ===============================================================
 
-class InverterCalculatorPage extends StatefulWidget {
-  const InverterCalculatorPage({super.key});
+class InverterCalculatorPage
+    extends StatefulWidget {
+  const InverterCalculatorPage({
+    super.key,
+  });
 
   @override
   State<InverterCalculatorPage> createState() =>
@@ -1237,24 +1561,44 @@ class InverterCalculatorPage extends StatefulWidget {
 
 class _InverterCalculatorPageState
     extends State<InverterCalculatorPage> {
-  final loadController = TextEditingController();
+  final loadController =
+      TextEditingController();
+
   final marginController =
-      TextEditingController(text: '25');
+      TextEditingController(
+    text: '25',
+  );
 
   double? result;
 
   void calculate() {
-    final load = parseNumber(loadController.text);
+    final load =
+        parseNumber(
+          loadController.text,
+        );
+
     final margin =
-        parseNumber(marginController.text) / 100;
+        parseNumber(
+              marginController.text,
+            ) /
+            100;
 
-    if (load <= 0) return;
+    if (load <= 0 ||
+        margin < 0) {
+      return;
+    }
 
-    final kw = load / 1000;
-    final required = kw * (1 + margin);
+    final kw =
+        load / 1000;
+
+    final required =
+        kw * (1 + margin);
 
     setState(() {
-      result = standardInverterSize(required);
+      result =
+          standardInverterSize(
+        required,
+      );
     });
   }
 
@@ -1269,52 +1613,74 @@ class _InverterCalculatorPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حاسبة الإنفرتر'),
+        title:
+            const Text('حاسبة الإنفرتر'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding:
+            const EdgeInsets.all(16),
         children: [
           TextField(
-            controller: loadController,
+            controller:
+                loadController,
             keyboardType:
                 const TextInputType.numberWithOptions(
               decimal: true,
             ),
-            decoration: const InputDecoration(
-              labelText: 'إجمالي الحمل',
+            decoration:
+                const InputDecoration(
+              labelText:
+                  'إجمالي الحمل الأقصى',
               suffixText: 'W',
-              border: OutlineInputBorder(),
+              border:
+                  OutlineInputBorder(),
             ),
           ),
+
           const SizedBox(height: 10),
+
           TextField(
-            controller: marginController,
+            controller:
+                marginController,
             keyboardType:
                 const TextInputType.numberWithOptions(
               decimal: true,
             ),
-            decoration: const InputDecoration(
-              labelText: 'هامش الأمان',
+            decoration:
+                const InputDecoration(
+              labelText:
+                  'هامش الأمان',
               suffixText: '%',
-              border: OutlineInputBorder(),
+              border:
+                  OutlineInputBorder(),
             ),
           ),
+
           const SizedBox(height: 15),
+
           FilledButton(
             onPressed: calculate,
-            child: const Text('احسب الإنفرتر'),
+            child: const Text(
+              'احسب الإنفرتر',
+            ),
           ),
+
           if (result != null) ...[
             const SizedBox(height: 20),
+
             Card(
               child: ListTile(
-                title: const Text('الإنفرتر المقترح'),
+                title: const Text(
+                  'الإنفرتر المقترح',
+                ),
                 trailing: Text(
                   '${formatNumber(result!)} kW',
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     color: Colors.green,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
               ),
@@ -1330,8 +1696,11 @@ class _InverterCalculatorPageState
 // PANEL CALCULATOR
 // ===============================================================
 
-class PanelCalculatorPage extends StatefulWidget {
-  const PanelCalculatorPage({super.key});
+class PanelCalculatorPage
+    extends StatefulWidget {
+  const PanelCalculatorPage({
+    super.key,
+  });
 
   @override
   State<PanelCalculatorPage> createState() =>
@@ -1340,35 +1709,62 @@ class PanelCalculatorPage extends StatefulWidget {
 
 class _PanelCalculatorPageState
     extends State<PanelCalculatorPage> {
-  final energyController = TextEditingController();
+  final energyController =
+      TextEditingController();
+
   final sunController =
-      TextEditingController(text: '5.5');
+      TextEditingController(
+    text: '5.5',
+  );
+
   final performanceController =
-      TextEditingController(text: '80');
+      TextEditingController(
+    text: '80',
+  );
+
   final panelController =
-      TextEditingController(text: '550');
+      TextEditingController(
+    text: '550',
+  );
 
   double? pvKw;
   int? panels;
 
   void calculate() {
     final energy =
-        parseNumber(energyController.text) * 1000;
-    final sun = parseNumber(sunController.text);
+        parseNumber(
+              energyController.text,
+            ) *
+            1000;
+
+    final sun =
+        parseNumber(
+      sunController.text,
+    );
+
     final performance =
-        parseNumber(performanceController.text) / 100;
+        parseNumber(
+              performanceController.text,
+            ) /
+            100;
+
     final panel =
-        parseNumber(panelController.text);
+        parseNumber(
+      panelController.text,
+    );
 
     if (energy <= 0 ||
         sun <= 0 ||
         performance <= 0 ||
+        performance > 1 ||
         panel <= 0) {
       return;
     }
 
     final kw =
-        energy / (sun * performance) / 1000;
+        energy /
+        (sun * performance) /
+        1000;
 
     final count =
         (kw * 1000 / panel).ceil();
@@ -1392,10 +1788,12 @@ class _PanelCalculatorPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حاسبة الألواح'),
+        title:
+            const Text('حاسبة الألواح'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding:
+            const EdgeInsets.all(16),
         children: [
           _field(
             energyController,
@@ -1417,16 +1815,21 @@ class _PanelCalculatorPageState
             'قدرة اللوح',
             'W',
           ),
+
           FilledButton(
             onPressed: calculate,
-            child: const Text('احسب'),
+            child:
+                const Text('احسب'),
           ),
+
           if (panels != null) ...[
             const SizedBox(height: 20),
+
             _resultBox(
               'قدرة الألواح',
               '${formatNumber(pvKw!)} kWp',
             ),
+
             _resultBox(
               'عدد الألواح',
               '$panels لوح',
@@ -1443,30 +1846,40 @@ class _PanelCalculatorPageState
     String suffix,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding:
+          const EdgeInsets.only(
+        bottom: 10,
+      ),
       child: TextField(
         controller: controller,
         keyboardType:
             const TextInputType.numberWithOptions(
           decimal: true,
         ),
-        decoration: InputDecoration(
+        decoration:
+            InputDecoration(
           labelText: label,
           suffixText: suffix,
-          border: const OutlineInputBorder(),
+          border:
+              const OutlineInputBorder(),
         ),
       ),
     );
   }
 
-  Widget _resultBox(String title, String value) {
+  Widget _resultBox(
+    String title,
+    String value,
+  ) {
     return Card(
       child: ListTile(
         title: Text(title),
         trailing: Text(
           value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.bold,
             color: Colors.green,
           ),
         ),
@@ -1476,105 +1889,379 @@ class _PanelCalculatorPageState
 }
 
 // ===============================================================
-// MARKET PAGE - API CONNECTED
+// BRAND MODEL
+// ===============================================================
+
+class Brand {
+  final String name;
+  final String description;
+  final IconData icon;
+  final List<BrandProduct> products;
+
+  const Brand({
+    required this.name,
+    required this.description,
+    required this.icon,
+    required this.products,
+  });
+}
+
+// ===============================================================
+// BRAND PRODUCT
+// ===============================================================
+
+class BrandProduct {
+  final String name;
+  final String category;
+  final String specification;
+  final String price;
+  final String status;
+
+  const BrandProduct({
+    required this.name,
+    required this.category,
+    required this.specification,
+    required this.price,
+    required this.status,
+  });
+}
+
+// ===============================================================
+// BRANDS DATABASE
+// ===============================================================
+
+final List<Brand> brands = [
+  Brand(
+    name: 'Deye',
+    description:
+        'إنفرترات وبطاريات وحلول تخزين الطاقة الشمسية.',
+    icon: Icons.bolt,
+    products: [
+      BrandProduct(
+        name: 'Deye Hybrid Inverter 5kW',
+        category: 'إنفرتر',
+        specification:
+            '5kW - Hybrid - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Deye Hybrid Inverter 8kW',
+        category: 'إنفرتر',
+        specification:
+            '8kW - Hybrid - Single Phase',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Deye Hybrid Inverter 12kW',
+        category: 'إنفرتر',
+        specification:
+            '12kW - Hybrid - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Deye Lithium Battery',
+        category: 'بطارية',
+        specification:
+            'LiFePO4 - High Voltage',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'MUST',
+    description:
+        'حلول الإنفرترات والبطاريات وأنظمة الطاقة الشمسية.',
+    icon: Icons.battery_charging_full,
+    products: [
+      BrandProduct(
+        name: 'MUST Hybrid Inverter 3.6kW',
+        category: 'إنفرتر',
+        specification:
+            '3.6kW - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'MUST Hybrid Inverter 5kW',
+        category: 'إنفرتر',
+        specification:
+            '5kW - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'MUST Lithium Battery',
+        category: 'بطارية',
+        specification:
+            'LiFePO4 - 5.12kWh',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'Growatt',
+    description:
+        'إنفرترات هجينة وأجهزة تخزين وحلول الطاقة الشمسية.',
+    icon: Icons.solar_power,
+    products: [
+      BrandProduct(
+        name: 'Growatt SPF 5000 ES',
+        category: 'إنفرتر',
+        specification:
+            '5kW - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Growatt 6kW Hybrid',
+        category: 'إنفرتر',
+        specification:
+            '6kW - Hybrid',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Growatt Lithium Battery',
+        category: 'بطارية',
+        specification:
+            'LiFePO4',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'Voltronic',
+    description:
+        'إنفرترات وحلول الطاقة الشمسية وأنظمة UPS.',
+    icon: Icons.electrical_services,
+    products: [
+      BrandProduct(
+        name: 'Voltronic Axpert 5kW',
+        category: 'إنفرتر',
+        specification:
+            '5kW - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Voltronic Axpert 6kW',
+        category: 'إنفرتر',
+        specification:
+            '6kW - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'Felicity Solar',
+    description:
+        'إنفرترات وبطاريات وأنظمة تخزين الطاقة.',
+    icon: Icons.battery_full,
+    products: [
+      BrandProduct(
+        name: 'Felicity Solar 5kW',
+        category: 'إنفرتر',
+        specification:
+            '5kW - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Felicity Solar Battery',
+        category: 'بطارية',
+        specification:
+            'LiFePO4 - 5kWh',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'Jinko Solar',
+    description:
+        'ألواح شمسية عالية الكفاءة للاستخدامات المنزلية والتجارية.',
+    icon: Icons.grid_view,
+    products: [
+      BrandProduct(
+        name: 'Jinko Solar 550W',
+        category: 'لوح شمسي',
+        specification:
+            '550W - Mono - High Efficiency',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Jinko Solar 580W',
+        category: 'لوح شمسي',
+        specification:
+            '580W - Mono',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Jinko Solar 600W',
+        category: 'لوح شمسي',
+        specification:
+            '600W - Mono',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'LONGi',
+    description:
+        'ألواح شمسية عالية الكفاءة وتقنيات الطاقة الشمسية الحديثة.',
+    icon: Icons.view_module,
+    products: [
+      BrandProduct(
+        name: 'LONGi Solar 550W',
+        category: 'لوح شمسي',
+        specification:
+            '550W - Mono',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'LONGi Solar 580W',
+        category: 'لوح شمسي',
+        specification:
+            '580W - High Efficiency',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'LONGi Solar 600W',
+        category: 'لوح شمسي',
+        specification:
+            '600W - Mono',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'Huawei',
+    description:
+        'حلول الطاقة الشمسية والإنفرترات الذكية وأنظمة التخزين.',
+    icon: Icons.memory,
+    products: [
+      BrandProduct(
+        name: 'Huawei SUN2000',
+        category: 'إنفرتر',
+        specification:
+            'Hybrid Solar Inverter',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Huawei LUNA Battery',
+        category: 'بطارية',
+        specification:
+            'Smart Lithium Battery',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'Solis',
+    description:
+        'إنفرترات الطاقة الشمسية وأنظمة التخزين.',
+    icon: Icons.energy_savings_leaf,
+    products: [
+      BrandProduct(
+        name: 'Solis Hybrid 5kW',
+        category: 'إنفرتر',
+        specification:
+            '5kW - Hybrid',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'Solis Hybrid 10kW',
+        category: 'إنفرتر',
+        specification:
+            '10kW - Hybrid',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+
+  Brand(
+    name: 'SRNE',
+    description:
+        'إنفرترات ومنظمات شحن وحلول الطاقة الشمسية.',
+    icon: Icons.settings_input_component,
+    products: [
+      BrandProduct(
+        name: 'SRNE Hybrid Inverter',
+        category: 'إنفرتر',
+        specification:
+            'Hybrid - 48V',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+      BrandProduct(
+        name: 'SRNE MPPT',
+        category: 'منظم شحن',
+        specification:
+            'MPPT Solar Charge Controller',
+        price: 'السعر عند الطلب',
+        status: 'متوفر',
+      ),
+    ],
+  ),
+];
+
+// ===============================================================
+// MARKET PAGE - BRANDS
 // ===============================================================
 
 class MarketPage extends StatefulWidget {
   const MarketPage({super.key});
 
   @override
-  State<MarketPage> createState() => _MarketPageState();
+  State<MarketPage> createState() =>
+      _MarketPageState();
 }
 
-class _MarketPageState extends State<MarketPage> {
-  List<Product> products = [];
-
-  bool loading = true;
-  String? error;
-
-  String selectedCategory = 'الكل';
+class _MarketPageState
+    extends State<MarketPage> {
   String search = '';
 
-  DateTime? lastUpdated;
+  List<Brand> get filteredBrands {
+    final query =
+        search.trim().toLowerCase();
 
-  @override
-  void initState() {
-    super.initState();
-    loadProducts();
-  }
-
-  Future<void> loadProducts() async {
-    if (!mounted) return;
-
-    setState(() {
-      loading = true;
-      error = null;
-    });
-
-    try {
-      final data =
-          await PriceApiService.fetchProducts();
-
-      DateTime? latest;
-
-      for (final product in data) {
-        if (product.checkedAt != null) {
-          if (latest == null ||
-              product.checkedAt!.isAfter(latest)) {
-            latest = product.checkedAt;
-          }
-        }
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        products = data;
-        lastUpdated = latest;
-        loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        loading = false;
-        error = 'تعذر الاتصال بالسيرفر';
-      });
+    if (query.isEmpty) {
+      return brands;
     }
-  }
 
-  List<Product> get filteredProducts {
-    return products.where((product) {
-      final categoryOk =
-          selectedCategory == 'الكل' ||
-              product.category == selectedCategory;
-
-      final query =
-          search.trim().toLowerCase();
-
-      final searchOk =
-          query.isEmpty ||
-              product.brand
-                  .toLowerCase()
-                  .contains(query) ||
-              product.model
-                  .toLowerCase()
-                  .contains(query) ||
-              product.specification
-                  .toLowerCase()
-                  .contains(query);
-
-      return categoryOk && searchOk;
+    return brands.where((brand) {
+      return brand.name
+              .toLowerCase()
+              .contains(query) ||
+          brand.description
+              .toLowerCase()
+              .contains(query);
     }).toList();
-  }
-
-  String formatDate(DateTime date) {
-    final local = date.toLocal();
-
-    return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
-        '${local.day.toString().padLeft(2, '0')} '
-        '${local.hour.toString().padLeft(2, '0')}:'
-        '${local.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -1582,191 +2269,352 @@ class _MarketPageState extends State<MarketPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'السوق الشمسي',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'تحديث الأسعار',
-            onPressed: loading ? null : loadProducts,
-            icon: const Icon(Icons.refresh),
+          'سوق البراندات',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: loadProducts,
-        child: _buildBody(),
-      ),
-    );
-  }
-
-  Widget _buildBody() {
-    if (loading && products.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (error != null && products.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(30),
+      body: ListView(
+        padding: const EdgeInsets.all(14),
         children: [
-          const SizedBox(height: 100),
-          const Icon(
-            Icons.cloud_off,
-            size: 70,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 15),
-          Center(
-            child: Text(
-              error!,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 15),
-          FilledButton.icon(
-            onPressed: loadProducts,
-            icon: const Icon(Icons.refresh),
-            label: const Text('إعادة المحاولة'),
-          ),
-        ],
-      );
-    }
+          _marketHeader(),
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(12),
-      children: [
-        _marketHeader(),
-        const SizedBox(height: 12),
-        TextField(
-          onChanged: (value) {
-            setState(() {
-              search = value;
-            });
-          },
-          decoration: InputDecoration(
-            hintText: 'ابحث عن شركة أو موديل...',
-            prefixIcon: const Icon(Icons.search),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 48,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _categoryChip('الكل'),
-              _categoryChip('إنفرترات'),
-              _categoryChip('بطاريات'),
-              _categoryChip('ألواح'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (error != null)
-          Card(
-            color: Colors.orange.shade50,
-            child: const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text(
-                'تعذر تحديث البيانات. يتم عرض آخر بيانات متوفرة.',
+          const SizedBox(height: 14),
+
+          TextField(
+            onChanged: (value) {
+              setState(() {
+                search = value;
+              });
+            },
+            decoration: InputDecoration(
+              hintText:
+                  'ابحث عن البراند...',
+              prefixIcon:
+                  const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(15),
               ),
             ),
           ),
-        if (filteredProducts.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(40),
-            child: Center(
-              child: Text(
-                'لا توجد منتجات متاحة حالياً',
-                style: TextStyle(fontSize: 17),
-              ),
+
+          const SizedBox(height: 16),
+
+          const Text(
+            'البراندات',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ...filteredProducts.map(
-          (product) => _productCard(product),
-        ),
-      ],
+
+          const SizedBox(height: 10),
+
+          ...filteredBrands.map(
+            (brand) =>
+                _brandCard(brand),
+          ),
+
+          if (filteredBrands.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: Center(
+                child: Text(
+                  'لا يوجد براند بهذا الاسم',
+                  style: TextStyle(
+                    fontSize: 17,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _marketHeader() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.green.shade100,
-              child: Icon(
-                Icons.public,
-                color: Colors.green.shade800,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'أسعار السوق',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    lastUpdated == null
-                        ? 'الأسعار من قاعدة البيانات'
-                        : 'آخر تحديث: ${formatDate(lastUpdated!)}',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius:
+            BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Colors.green.shade800,
+            Colors.green.shade500,
           ],
+        ),
+      ),
+      child: const Row(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: Colors.white,
+            child: Icon(
+              Icons.storefront,
+              size: 34,
+              color: Colors.green,
+            ),
+          ),
+
+          SizedBox(width: 14),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'سوق البراندات',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'اختر البراند لعرض منتجاته وصفحة البيع',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _brandCard(Brand brand) {
+    return Card(
+      elevation: 1,
+      margin:
+          const EdgeInsets.only(bottom: 11),
+      child: InkWell(
+        borderRadius:
+            BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  BrandPage(brand: brand),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 65,
+                height: 65,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius:
+                      BorderRadius.circular(16),
+                  border: Border.all(
+                    color:
+                        Colors.green.shade100,
+                  ),
+                ),
+                child: Icon(
+                  brand.icon,
+                  size: 32,
+                  color:
+                      Colors.green.shade800,
+                ),
+              ),
+
+              const SizedBox(width: 13),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      brand.name,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      brand.description,
+                      maxLines: 2,
+                      overflow:
+                          TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color:
+                            Colors.grey.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    Text(
+                      '${brand.products.length} منتجات',
+                      style: TextStyle(
+                        color:
+                            Colors.green.shade700,
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              const Icon(
+                Icons.arrow_back_ios_new,
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _categoryChip(String category) {
-    final selected =
-        selectedCategory == category;
+// ===============================================================
+// BRAND PAGE
+// ===============================================================
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 7),
-      child: FilterChip(
-        selected: selected,
-        label: Text(category),
-        onSelected: (_) {
-          setState(() {
-            selectedCategory = category;
-          });
-        },
+class BrandPage extends StatelessWidget {
+  final Brand brand;
+
+  const BrandPage({
+    super.key,
+    required this.brand,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          brand.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(14),
+        children: [
+          _brandHeader(),
+
+          const SizedBox(height: 18),
+
+          const Text(
+            'منتجات البراند',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          ...brand.products.map(
+            (product) =>
+                _productCard(
+              context,
+              product,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          _sellerCard(context),
+        ],
       ),
     );
   }
 
-  Widget _productCard(Product product) {
+  Widget _brandHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius:
+            BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Colors.green.shade900,
+            Colors.green.shade600,
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  BorderRadius.circular(22),
+            ),
+            child: Icon(
+              brand.icon,
+              size: 48,
+              color: Colors.green.shade800,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            brand.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 7),
+
+          Text(
+            brand.description,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _productCard(
+    BuildContext context,
+    BrandProduct product,
+  ) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 1,
+      margin:
+          const EdgeInsets.only(bottom: 11),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -1775,109 +2623,310 @@ class _MarketPageState extends State<MarketPage> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor:
-                      Colors.green.shade100,
-                  child: Text(
-                    product.brand.isNotEmpty
-                        ? product.brand[0]
-                        : '?',
-                    style: TextStyle(
-                      color: Colors.green.shade900,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    product.brand,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
-                  ),
+                  width: 55,
+                  height: 55,
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color:
+                        Colors.green.shade50,
                     borderRadius:
-                        BorderRadius.circular(20),
+                        BorderRadius.circular(14),
                   ),
-                  child: Text(product.category),
+                  child: Icon(
+                    _categoryIcon(
+                      product.category,
+                    ),
+                    color:
+                        Colors.green.shade800,
+                    size: 28,
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style:
+                            const TextStyle(
+                          fontSize: 17,
+                          fontWeight:
+                              FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        product.category,
+                        style: TextStyle(
+                          color:
+                              Colors.green.shade700,
+                          fontWeight:
+                              FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
-            Text(
-              product.model,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
+
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius:
+                    BorderRadius.circular(10),
               ),
-            ),
-            if (product.specification.isNotEmpty)
-              Padding(
-                padding:
-                    const EdgeInsets.only(top: 5),
-                child: Text(
-                  product.specification,
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                  ),
+              child: Text(
+                product.specification,
+                style: TextStyle(
+                  color:
+                      Colors.grey.shade800,
                 ),
               ),
+            ),
+
             const SizedBox(height: 12),
+
             Row(
               children: [
                 Expanded(
-                  child: product.price != null
-                      ? Text(
-                          '\$${formatNumber(product.price!)}',
-                          style: const TextStyle(
-                            color: Colors.green,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : const Text(
-                          'السعر غير منشور',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.price,
+                        style:
+                            const TextStyle(
+                          color: Colors.green,
+                          fontSize: 16,
+                          fontWeight:
+                              FontWeight.bold,
                         ),
-                ),
-                if (product.source.isNotEmpty)
-                  Flexible(
-                    child: Text(
-                      product.source,
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
                       ),
-                    ),
+
+                      const SizedBox(height: 4),
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.circle,
+                            size: 9,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            product.status,
+                            style: TextStyle(
+                              color: Colors
+                                  .grey.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                ),
+
+                FilledButton.icon(
+                  onPressed: () {
+                    _showOrderDialog(
+                      context,
+                      product,
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.shopping_cart,
+                  ),
+                  label:
+                      const Text('طلب'),
+                ),
               ],
             ),
-            if (product.note.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                product.note,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
           ],
         ),
       ),
+    );
+  }
+
+  IconData _categoryIcon(
+    String category,
+  ) {
+    if (category.contains('بطارية')) {
+      return Icons.battery_full;
+    }
+
+    if (category.contains('لوح')) {
+      return Icons.solar_power;
+    }
+
+    if (category.contains('منظم')) {
+      return Icons.settings_input_component;
+    }
+
+    return Icons.electric_bolt;
+  }
+
+  Widget _sellerCard(
+    BuildContext context,
+  ) {
+    return Card(
+      color: Colors.green.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.storefront,
+              size: 42,
+              color: Colors.green,
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              'هل تريد شراء هذا البراند؟',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            const Text(
+              'تواصل مع Sudan SO لمعرفة السعر والتوفر ومعلومات الطلب.',
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 12),
+
+            FilledButton.icon(
+              onPressed: () {
+                _showContactDialog(context);
+              },
+              icon: const Icon(
+                Icons.phone,
+              ),
+              label: const Text(
+                'تواصل معنا',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOrderDialog(
+    BuildContext context,
+    BrandProduct product,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'طلب المنتج',
+          ),
+          content: Text(
+            'المنتج:\n'
+            '${product.name}\n\n'
+            'البراند:\n'
+            '${brand.name}\n\n'
+            'للطلب ومعرفة السعر والتوفر:\n'
+            '+249 91 653 7047',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child:
+                  const Text('إغلاق'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showContactDialog(context);
+              },
+              child:
+                  const Text('تواصل'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showContactDialog(
+    BuildContext context,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'التواصل والطلب',
+          ),
+          content: const Column(
+            mainAxisSize:
+                MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.contact_phone,
+                size: 50,
+                color: Colors.green,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Sudan SO',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight:
+                      FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'واتساب / هاتف',
+                textAlign:
+                    TextAlign.center,
+              ),
+              SizedBox(height: 5),
+              Text(
+                '+249 91 653 7047',
+                style: TextStyle(
+                  fontWeight:
+                      FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child:
+                  const Text('إغلاق'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1886,30 +2935,30 @@ class _MarketPageState extends State<MarketPage> {
 // ABOUT
 // ===============================================================
 
-class AboutPage extends StatelessWidget {
+class AboutPage
+    extends StatelessWidget {
   const AboutPage({super.key});
-
-  void openWhatsApp() {
-    // رقم التواصل:
-    // +249 91 653 7047
-    //
-    // يمكن لاحقاً إضافة url_launcher لفتح واتساب مباشرة.
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('عن Sudan SO'),
+        title:
+            const Text('عن Sudan SO'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding:
+            const EdgeInsets.all(20),
         children: [
           Container(
-            padding: const EdgeInsets.all(25),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25),
-              gradient: LinearGradient(
+            padding:
+                const EdgeInsets.all(25),
+            decoration:
+                BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(25),
+              gradient:
+                  LinearGradient(
                 colors: [
                   Colors.green.shade800,
                   Colors.green.shade500,
@@ -1923,19 +2972,26 @@ class AboutPage extends StatelessWidget {
                   color: Colors.white,
                   size: 70,
                 ),
+
                 SizedBox(height: 12),
+
                 Text(
                   'Sudan SO',
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     color: Colors.white,
                     fontSize: 30,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
+
                 SizedBox(height: 8),
+
                 Text(
                   'حلول الطاقة الشمسية',
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     color: Colors.white,
                     fontSize: 17,
                   ),
@@ -1943,68 +2999,99 @@ class AboutPage extends StatelessWidget {
               ],
             ),
           ),
+
           const SizedBox(height: 25),
+
           const Text(
             'باشمهندس حمزة الطيب',
-            textAlign: TextAlign.center,
-            style: TextStyle(
+            textAlign:
+                TextAlign.center,
+            style:
+                TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 10),
+
           const Text(
             'خبرة واسعة في مجال الطاقة الشمسية',
-            textAlign: TextAlign.center,
-            style: TextStyle(
+            textAlign:
+                TextAlign.center,
+            style:
+                TextStyle(
               fontSize: 17,
             ),
           ),
+
           const SizedBox(height: 25),
+
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding:
+                  const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'خدماتنا',
-                    style: TextStyle(
+                    style:
+                        TextStyle(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   _service(
                     Icons.engineering,
                     'الاستشارات الهندسية',
                   ),
+
                   _service(
                     Icons.design_services,
                     'تصميم أنظمة الطاقة الشمسية',
                   ),
+
                   _service(
                     Icons.install_mobile,
                     'تركيب وتشغيل الأنظمة',
                   ),
+
                   _service(
                     Icons.calculate,
                     'حساب الأحمال والبطاريات والألواح',
+                  ),
+
+                  _service(
+                    Icons.storefront,
+                    'سوق براندات الطاقة الشمسية',
                   ),
                 ],
               ),
             ),
           ),
+
           const SizedBox(height: 20),
+
           Card(
             child: ListTile(
-              leading: const Icon(
+              leading:
+                  const Icon(
                 Icons.phone,
                 color: Colors.green,
               ),
-              title: const Text('واتساب'),
-              subtitle: const Text(
+              title:
+                  const Text(
+                'واتساب',
+              ),
+              subtitle:
+                  const Text(
                 '+249 91 653 7047',
               ),
             ),
@@ -2019,15 +3106,22 @@ class AboutPage extends StatelessWidget {
     String text,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding:
+          const EdgeInsets.only(
+        bottom: 12,
+      ),
       child: Row(
         children: [
           Icon(
             icon,
             color: Colors.green,
           ),
+
           const SizedBox(width: 10),
-          Expanded(child: Text(text)),
+
+          Expanded(
+            child: Text(text),
+          ),
         ],
       ),
     );
