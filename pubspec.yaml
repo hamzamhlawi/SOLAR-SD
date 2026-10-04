@@ -1,19 +1,28 @@
 name: solar_sd
-description: A professional task manager built with Flutter.
+
+description: Sudan SO - Solar Energy Calculator and Solar Market
+
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.2.2
+
+  http: ^1.2.0
+  router_os_client: ^2.0.1
+  pdf: ^3.11.3
+  printing: ^5.13.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.5.0
