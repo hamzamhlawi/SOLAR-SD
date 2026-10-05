@@ -1,41 +1,52 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const SudanSOApp());
-}
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================
-// SUDANSO
-// Solar Energy Calculator + Solar Market
+// SUDANSO — Solar Energy Platform
+// Single File Build
 // ============================================================
 
-class SudanSOApp extends StatelessWidget {
-  const SudanSOApp({super.key});
+void main() => runApp(const SudansoApp());
+
+class SudansoApp extends StatelessWidget {
+  const SudansoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SUDANSO',
-      locale: const Locale('ar'),
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.green,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1B8A4A),
+          primary: const Color(0xFF1B8A4A),
+          secondary: const Color(0xFFEF6C00),
+        ),
         scaffoldBackgroundColor: const Color(0xFFF6F9F7),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
+          backgroundColor: Color(0xFF1B8A4A),
+          foregroundColor: Colors.white,
+        ),
+        cardTheme: CardTheme(
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          filled: true,
-          fillColor: Colors.white,
         ),
       ),
-      home: const HomePage(),
+      home: const HomeScreen(),
     );
   }
 }
@@ -43,2666 +54,976 @@ class SudanSOApp extends StatelessWidget {
 // ============================================================
 // HELPERS
 // ============================================================
-
-double ceilTo(double value, double step) {
-  if (step == 0) return value;
-  return (value / step).ceil() * step;
+double parseNum(String text) {
+  if (text.trim().isEmpty) return 0;
+  return double.tryParse(text.replaceAll(',', '.').trim()) ?? 0;
 }
 
-// FIX:
-// كان double ويسبب Error عندما تكون نتيجة العملية num.
-// الآن يقبل double و num بدون مشاكل.
-String f(num value, [int digits = 2]) {
-  return value.toStringAsFixed(digits);
-}
-
-Widget sectionTitle(String title, IconData icon) {
-  return Padding(
-    padding: const EdgeInsets.only(top: 18, bottom: 10),
-    child: Row(
-      children: [
-        Icon(icon, color: Colors.green.shade700),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget resultCard({
-  required String title,
-  required String value,
-  String? subtitle,
-  IconData icon = Icons.check_circle,
-}) {
-  return Card(
-    elevation: 1,
-    margin: const EdgeInsets.symmetric(vertical: 5),
-    child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Colors.green.shade50,
-        child: Icon(
-          icon,
-          color: Colors.green.shade700,
-        ),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: subtitle == null ? null : Text(subtitle),
-      trailing: Text(
-        value,
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-          color: Colors.green.shade800,
-        ),
-      ),
-    ),
-  );
-}
-
-double parse(String text) {
-  return double.tryParse(
-        text.replaceAll(',', '.').trim(),
-      ) ??
-      0;
-}
-
-Widget numberField(
-  TextEditingController controller,
-  String label, {
-  String? suffix,
-  double? initial,
-}) {
-  if (initial != null && controller.text.isEmpty) {
-    controller.text = initial.toString();
-  }
-
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(
-        decimal: true,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        suffixText: suffix,
-      ),
-    ),
-  );
-}
-
-Widget textField(
-  TextEditingController controller,
-  String label, {
-  String? suffix,
-}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: TextField(
-      controller: controller,
-      keyboardType: TextInputType.text,
-      decoration: InputDecoration(
-        labelText: label,
-        suffixText: suffix,
-      ),
-    ),
-  );
+String fmt(num value, [int digits = 2]) {
+  if (value.isNaN || value.isInfinite) return '—';
+  return value.toDouble().toStringAsFixed(digits);
 }
 
 // ============================================================
-// HOME
+// MODELS
 // ============================================================
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      (
-        'الحساب الكامل',
-        'تصميم نظام شمسي كامل',
-        Icons.auto_graph,
-        const FullSystemPage()
-      ),
-      (
-        'الأجهزة والاستهلاك',
-        'احسب الاستهلاك اليومي بدون نسب مخفية',
-        Icons.electrical_services,
-        const ApplianceCalculatorPage()
-      ),
-      (
-        'حاسبة الألواح',
-        'عدد الألواح والقدرة المطلوبة',
-        Icons.solar_power,
-        const PanelCalculatorPage()
-      ),
-      (
-        'حاسبة البطارية',
-        'Lithium / AGM / FLD',
-        Icons.battery_charging_full,
-        const BatteryCalculatorPage()
-      ),
-      (
-        'حاسبة الإنفرتر',
-        'الحمل المستمر وحمل الإقلاع',
-        Icons.power,
-        const InverterCalculatorPage()
-      ),
-      (
-        'سوق الإنفرترات',
-        'البراندات والمواصفات والأسعار بالدولار',
-        Icons.storefront,
-        const MarketPage()
-      ),
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'SUDANSO',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.wb_sunny,
-                      size: 60,
-                      color: Colors.orange,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'SUDANSO',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'حلول الطاقة الشمسية',
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...items.map(
-              (item) => Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.green.shade50,
-                    child: Icon(
-                      item.$3,
-                      color: Colors.green.shade700,
-                    ),
-                  ),
-                  title: Text(
-                    item.$1,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(item.$2),
-                  trailing: const Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 16,
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => item.$4,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// APPLIANCE MODEL
-// ============================================================
-
 class Appliance {
   String name;
   double watts;
   int quantity;
   double hours;
-  bool motor;
+  bool isMotor;
 
   Appliance({
     required this.name,
     required this.watts,
     required this.quantity,
     required this.hours,
-    this.motor = false,
+    this.isMotor = false,
   });
 
-  double get dailyWh {
-    return watts * quantity * hours;
+  double get dailyWh => watts * quantity * hours;
+  double get continuousW => watts * quantity;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'watts': watts,
+        'quantity': quantity,
+        'hours': hours,
+        'isMotor': isMotor,
+      };
+
+  factory Appliance.fromJson(Map<String, dynamic> j) => Appliance(
+        name: j['name'] as String? ?? 'جهاز',
+        watts: (j['watts'] as num?)?.toDouble() ?? 0,
+        quantity: (j['quantity'] as num?)?.toInt() ?? 1,
+        hours: (j['hours'] as num?)?.toDouble() ?? 0,
+        isMotor: j['isMotor'] as bool? ?? false,
+      );
+}
+
+class Project {
+  String id;
+  String name;
+  String type;
+  DateTime createdAt;
+  DateTime updatedAt;
+  List<Appliance> appliances;
+
+  Project({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.appliances,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'type': type,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+        'appliances': appliances.map((a) => a.toJson()).toList(),
+      };
+
+  factory Project.fromJson(Map<String, dynamic> j) => Project(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        type: j['type'] as String? ?? 'منزل',
+        createdAt: DateTime.parse(j['createdAt'] as String),
+        updatedAt: DateTime.parse(j['updatedAt'] as String),
+        appliances: (j['appliances'] as List)
+            .map((e) => Appliance.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class ProjectService {
+  static const _key = 'sudanso_projects_v1';
+
+  static Future<List<Project>> loadAll() async {
+    final sp = await SharedPreferences.getInstance();
+    final raw = sp.getString(_key);
+    if (raw == null || raw.isEmpty) return [];
+    final List list = jsonDecode(raw) as List;
+    return list
+        .map((e) => Project.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  double get continuousW {
-    return watts * quantity;
+  static Future<void> saveAll(List<Project> projects) async {
+    final sp = await SharedPreferences.getInstance();
+    final raw = jsonEncode(projects.map((p) => p.toJson()).toList());
+    await sp.setString(_key, raw);
   }
 }
 
 // ============================================================
-// APPLIANCE CALCULATOR
+// HOME
 // ============================================================
-
-class ApplianceCalculatorPage extends StatefulWidget {
-  const ApplianceCalculatorPage({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<ApplianceCalculatorPage> createState() =>
-      _ApplianceCalculatorPageState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _ApplianceCalculatorPageState
-    extends State<ApplianceCalculatorPage> {
+class _HomeScreenState extends State<HomeScreen> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      const DashboardTab(),
+      const FullSystemPage(),
+      const ProjectsPage(),
+    ];
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: pages[_index],
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (i) => setState(() => _index = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'الرئيسية',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.auto_graph_outlined),
+              selectedIcon: Icon(Icons.auto_graph),
+              label: 'التصميم',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.folder_outlined),
+              selectedIcon: Icon(Icons.folder),
+              label: 'مشاريعي',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+class DashboardTab extends StatelessWidget {
+  const DashboardTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_Dash>[
+      _Dash('الحساب الكامل', 'تصميم نظام شمسي كامل',
+          Icons.auto_graph, const FullSystemPage()),
+      _Dash('الأجهزة والاستهلاك', 'احسب الاستهلاك اليومي',
+          Icons.electrical_services, const AppliancesPage()),
+      _Dash('حاسبة الألواح', 'عدد الألواح وMPPT',
+          Icons.solar_power, const PanelsPage()),
+      _Dash('حاسبة البطارية', 'Lithium / AGM / FLD',
+          Icons.battery_charging_full, const BatteryPage()),
+      _Dash('حاسبة الإنفرتر', 'الحمل المستمر وحمل الإقلاع',
+          Icons.power, const InverterPage()),
+      _Dash('عن التطبيق', 'معلومات وتواصل',
+          Icons.info_outline, const AboutPage()),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('SUDANSO')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: const [
+                  Icon(Icons.wb_sunny, size: 60, color: Colors.orange),
+                  SizedBox(height: 8),
+                  Text('SUDANSO',
+                      style: TextStyle(
+                          fontSize: 28, fontWeight: FontWeight.bold)),
+                  Text('حلول الطاقة الشمسية',
+                      style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...items.map((it) => Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.green.shade50,
+                    child: Icon(it.icon, color: Colors.green.shade700),
+                  ),
+                  title: Text(it.title,
+                      style:
+                          const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(it.subtitle),
+                  trailing:
+                      const Icon(Icons.arrow_back_ios_new, size: 16),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => it.page),
+                  ),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _Dash {
+  final String title, subtitle;
+  final IconData icon;
+  final Widget page;
+  _Dash(this.title, this.subtitle, this.icon, this.page);
+}
+
+// ============================================================
+// APPLIANCES PAGE
+// ============================================================
+class AppliancesPage extends StatefulWidget {
+  const AppliancesPage({super.key});
+
+  @override
+  State<AppliancesPage> createState() => _AppliancesPageState();
+}
+
+class _AppliancesPageState extends State<AppliancesPage> {
   final List<Appliance> appliances = [];
 
-  double get dailyWh {
-    return appliances.fold(
-      0.0,
-      (sum, a) => sum + a.dailyWh,
-    );
-  }
-
-  double get peakW {
-    return appliances.fold(
-      0.0,
-      (sum, a) => sum + a.continuousW,
-    );
-  }
+  double get dailyWh => appliances.fold(0.0, (s, a) => s + a.dailyWh);
+  double get peakW =>
+      appliances.fold(0.0, (s, a) => s + a.continuousW);
+  double get motorW => appliances
+      .where((a) => a.isMotor)
+      .fold(0.0, (s, a) => s + a.continuousW);
 
   void addAppliance() {
-    final name = TextEditingController();
-    final watts = TextEditingController();
-    final qty = TextEditingController(text: '1');
-    final hours = TextEditingController(text: '4');
+    final nameC = TextEditingController();
+    final wattsC = TextEditingController();
+    final qtyC = TextEditingController(text: '1');
+    final hoursC = TextEditingController(text: '4');
+    bool isMotor = false;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('إضافة جهاز'),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              // FIX: اسم الجهاز أصبح TextField وليس NumberField
-              textField(
-                name,
-                'اسم الجهاز',
-              ),
-              numberField(
-                watts,
-                'القدرة W',
-              ),
-              numberField(
-                qty,
-                'العدد',
-              ),
-              numberField(
-                hours,
-                'ساعات التشغيل يومياً',
-              ),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('إضافة جهاز'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameC,
+                  decoration:
+                      const InputDecoration(labelText: 'اسم الجهاز'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: wattsC,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'القدرة W'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: qtyC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'العدد'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: hoursC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                      labelText: 'ساعات التشغيل يومياً'),
+                ),
+                CheckboxListTile(
+                  value: isMotor,
+                  title: const Text('جهاز بمحرك/كمبروسر'),
+                  onChanged: (v) =>
+                      setDialog(() => isMotor = v ?? false),
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final wattsValue = parse(watts.text);
-              final qtyValue = parse(qty.text).round();
-              final hoursValue = parse(hours.text);
-
-              if (wattsValue <= 0 ||
-                  qtyValue <= 0 ||
-                  hoursValue <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'أدخل القدرة والعدد وساعات التشغيل بشكل صحيح.',
-                    ),
-                  ),
-                );
-                return;
-              }
-
-              setState(() {
-                appliances.add(
-                  Appliance(
-                    name: name.text.trim().isEmpty
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final w = parseNum(wattsC.text);
+                final q = parseNum(qtyC.text).round();
+                final h = parseNum(hoursC.text);
+                if (w <= 0 || q <= 0 || h <= 0) return;
+                setState(() {
+                  appliances.add(Appliance(
+                    name: nameC.text.trim().isEmpty
                         ? 'جهاز'
-                        : name.text.trim(),
-                    watts: wattsValue,
-                    quantity: qtyValue,
-                    hours: hoursValue,
-                  ),
-                );
-              });
-
-              Navigator.pop(context);
-            },
-            child: const Text('إضافة'),
-          ),
-        ],
+                        : nameC.text.trim(),
+                    watts: w,
+                    quantity: q,
+                    hours: h,
+                    isMotor: isMotor,
+                  ));
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('إضافة'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('الأجهزة والاستهلاك'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: addAppliance,
-        icon: const Icon(Icons.add),
-        label: const Text('إضافة جهاز'),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('الأجهزة والاستهلاك')),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: addAppliance,
+          icon: const Icon(Icons.add),
+          label: const Text('إضافة جهاز'),
+        ),
+        body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            sectionTitle(
-              'قائمة الأحمال',
-              Icons.devices,
-            ),
             if (appliances.isEmpty)
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(18),
-                  child: Text(
-                    'لا توجد أجهزة.\n'
-                    'أضف الأجهزة والقدرة وساعات التشغيل الفعلية.',
-                    textAlign: TextAlign.center,
-                  ),
+                  child: Text('لا توجد أجهزة. أضف الأجهزة.',
+                      textAlign: TextAlign.center),
                 ),
               ),
-            ...appliances.asMap().entries.map(
-              (entry) {
-                final index = entry.key;
-                final a = entry.value;
-
-                return Card(
-                  child: ListTile(
-                    title: Text(a.name),
-                    subtitle: Text(
-                      '${f(a.watts)}W × ${a.quantity} × '
-                      '${f(a.hours)}h = '
-                      '${f(a.dailyWh / 1000)} kWh/day',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          appliances.removeAt(index);
-                        });
-                      },
-                    ),
+            ...appliances.asMap().entries.map((e) {
+              final i = e.key;
+              final a = e.value;
+              return Card(
+                child: ListTile(
+                  title:
+                      Text(a.name + (a.isMotor ? ' (محرك)' : '')),
+                  subtitle: Text(
+                      '${fmt(a.watts, 0)}W × ${a.quantity} × ${fmt(a.hours, 1)}h = ${fmt(a.dailyWh / 1000)} kWh/day'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () =>
+                        setState(() => appliances.removeAt(i)),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            }),
             const SizedBox(height: 10),
-            resultCard(
-              title: 'الاستهلاك اليومي',
-              value: '${f(dailyWh / 1000)} kWh',
-              icon: Icons.bolt,
-            ),
-            resultCard(
-              title: 'الحمل المتزامن المدخل',
-              value: '${f(peakW)} W',
-              icon: Icons.speed,
-            ),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(14),
-                child: Text(
-                  'ملاحظة: التطبيق لا يفرض استهلاكاً ثابتاً للثلاجات '
-                  'أو المكيفات أو المراوح. أدخل القدرة الحقيقية من '
-                  'لوحة الجهاز أو الداتا شيت، وساعات التشغيل الفعلية.',
-                ),
-              ),
-            ),
+            _result('الاستهلاك اليومي', '${fmt(dailyWh / 1000)} kWh',
+                Icons.bolt),
+            _result('الاستهلاك الشهري',
+                '${fmt(dailyWh * 30 / 1000)} kWh',
+                Icons.calendar_month),
+            _result('الحمل المتزامن', '${fmt(peakW)} W', Icons.speed),
+            _result('أحمال المحركات', '${fmt(motorW)} W',
+                Icons.settings),
           ],
         ),
       ),
     );
   }
+
+  Widget _result(String t, String v, IconData i) => Card(
+        child: ListTile(
+          leading: CircleAvatar(
+              backgroundColor: Colors.green.shade50,
+              child: Icon(i, color: Colors.green.shade700)),
+          title: Text(t),
+          trailing: Text(v,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+      );
 }
 
 // ============================================================
-// BATTERY PROFILES
+// FULL SYSTEM PAGE
 // ============================================================
-
-enum BatteryType {
-  lithium,
-  agm,
-  flooded,
-}
-
-String batteryName(BatteryType type) {
-  switch (type) {
-    case BatteryType.lithium:
-      return 'Lithium LiFePO4';
-    case BatteryType.agm:
-      return 'AGM';
-    case BatteryType.flooded:
-      return 'FLD / Flooded Lead Acid';
-  }
-}
-
-double batteryDefaultDod(BatteryType type) {
-  switch (type) {
-    case BatteryType.lithium:
-      return 80;
-    case BatteryType.agm:
-      return 50;
-    case BatteryType.flooded:
-      return 50;
-  }
-}
-
-double batteryDefaultEfficiency(BatteryType type) {
-  switch (type) {
-    case BatteryType.lithium:
-      return 95;
-    case BatteryType.agm:
-      return 90;
-    case BatteryType.flooded:
-      return 85;
-  }
-}
-
-double voltageFor(
-  BatteryType type,
-  String system,
-) {
-  if (type == BatteryType.lithium) {
-    switch (system) {
-      case '12V':
-        return 12.55;
-      case '24V':
-        return 25.10;
-      case '48V':
-        return 51.20;
-    }
-  }
-
-  switch (system) {
-    case '12V':
-      return 12;
-    case '24V':
-      return 24;
-    case '48V':
-      return 48;
-  }
-
-  return 48;
-}
-
-// ============================================================
-// FULL SYSTEM
-// ============================================================
-
 class FullSystemPage extends StatefulWidget {
   const FullSystemPage({super.key});
 
   @override
-  State<FullSystemPage> createState() =>
-      _FullSystemPageState();
+  State<FullSystemPage> createState() => _FullSystemPageState();
 }
 
-class _FullSystemPageState
-    extends State<FullSystemPage> {
-  final dailyEnergy = TextEditingController(text: '10');
-  final peakLoad = TextEditingController(text: '3000');
-  final sunHours = TextEditingController(text: '5.5');
-  final pvLoss = TextEditingController(text: '15');
-
-  final autonomy = TextEditingController(text: '8');
-  final batteryAh = TextEditingController(text: '100');
-  final dod = TextEditingController();
-  final efficiency = TextEditingController();
-  final inverterMargin =
-      TextEditingController(text: '20');
-  final surge = TextEditingController(text: '2');
-
-  BatteryType batteryType = BatteryType.lithium;
-  String batterySystem = '48V';
-
+class _FullSystemPageState extends State<FullSystemPage> {
+  final daily = TextEditingController(text: '10');
+  final peak = TextEditingController(text: '3000');
+  final sun = TextEditingController(text: '5.5');
+  final loss = TextEditingController(text: '15');
+  final auto = TextEditingController(text: '8');
+  final bAh = TextEditingController(text: '100');
+  final dod = TextEditingController(text: '80');
+  final eff = TextEditingController(text: '95');
+  final margin = TextEditingController(text: '20');
+  final surge = TextEditingController(text: '3');
   double panelW = 550;
+  String voltage = '48';
+
+  final List<TextEditingController> _all = [];
 
   @override
   void initState() {
     super.initState();
-    updateBatteryDefaults();
+    _all.addAll(
+        [daily, peak, sun, loss, auto, bAh, dod, eff, margin, surge]);
+    for (final c in _all) {
+      c.addListener(_onChange);
+    }
   }
 
-  void updateBatteryDefaults() {
-    dod.text =
-        batteryDefaultDod(batteryType).toString();
-    efficiency.text =
-        batteryDefaultEfficiency(batteryType).toString();
+  void _onChange() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    dailyEnergy.dispose();
-    peakLoad.dispose();
-    sunHours.dispose();
-    pvLoss.dispose();
-    autonomy.dispose();
-    batteryAh.dispose();
-    dod.dispose();
-    efficiency.dispose();
-    inverterMargin.dispose();
-    surge.dispose();
+    for (final c in _all) {
+      c.removeListener(_onChange);
+      c.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final energy = parse(dailyEnergy.text);
-    final load = parse(peakLoad.text);
-    final sun = parse(sunHours.text);
-    final losses = parse(pvLoss.text) / 100;
-    final auto = parse(autonomy.text);
-    final ah = parse(batteryAh.text);
-    final d = parse(dod.text) / 100;
-    final eff = parse(efficiency.text) / 100;
-    final margin =
-        parse(inverterMargin.text) / 100;
-    final surgeFactor = parse(surge.text);
+    final e = parseNum(daily.text);
+    final p = parseNum(peak.text);
+    final s = parseNum(sun.text);
+    final l = parseNum(loss.text) / 100;
+    final a = parseNum(auto.text);
+    final ah = parseNum(bAh.text);
+    final d = parseNum(dod.text) / 100;
+    final ef = parseNum(eff.text) / 100;
+    final m = parseNum(margin.text) / 100;
+    final sf = parseNum(surge.text);
+    final v = double.tryParse(voltage) ?? 48;
 
-    final performance =
-        math.max(0.01, 1 - losses);
+    final perf = math.max(0.01, 1 - l);
+    final pvKW = s > 0 ? e / (s * perf) : 0.0;
+    final panels = panelW > 0 ? (pvKW * 1000 / panelW).ceil() : 0;
 
-    final pvKW = sun > 0
-        ? energy / (sun * performance)
-        : 0;
+    final backupWh = p * a;
+    final battKWh =
+        (d > 0 && ef > 0) ? backupWh / (d * ef) / 1000 : 0.0;
+    final oneKWh = ah * v / 1000;
+    final bCount = oneKWh > 0 ? (battKWh / oneKWh).ceil() : 0;
+    final totalAh = bCount * ah;
 
-    final panels = panelW > 0
-        ? (pvKW * 1000 / panelW).ceil()
-        : 0;
+    final invKW = p * (1 + m) / 1000;
+    final surgeKW = p * sf / 1000;
 
-    final inverterW =
-        load * (1 + margin);
-
-    final surgeW =
-        load * surgeFactor;
-
-    final backupWh =
-        load * auto;
-
-    final batteryKWh =
-        d > 0 && eff > 0
-            ? backupWh / (d * eff) / 1000
-            : 0;
-
-    final selectedVoltage =
-        voltageFor(
-      batteryType,
-      batterySystem,
-    );
-
-    final batteryEnergyEach =
-        ah * selectedVoltage / 1000;
-
-    final batteryCount =
-        batteryEnergyEach > 0
-            ? (batteryKWh /
-                    batteryEnergyEach)
-                .ceil()
-            : 0;
-
-    final totalAh =
-        batteryCount * ah;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'تصميم النظام الكامل',
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('تصميم النظام الكامل')),
+        body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            sectionTitle(
-              'الاستهلاك والحمل',
-              Icons.electrical_services,
-            ),
-            numberField(
-              dailyEnergy,
-              'الاستهلاك اليومي',
-              suffix: 'kWh/day',
-            ),
-            numberField(
-              peakLoad,
-              'الحمل الأقصى المتزامن',
-              suffix: 'W',
-            ),
-            sectionTitle(
-              'الألواح الشمسية',
-              Icons.solar_power,
-            ),
-            numberField(
-              sunHours,
-              'ساعات الشمس الفعالة',
-              suffix: 'h/day',
-            ),
-            numberField(
-              pvLoss,
-              'خسائر النظام',
-              suffix: '%',
-            ),
-            DropdownButtonFormField<double>(
-              value: panelW,
-              decoration: const InputDecoration(
-                labelText: 'قدرة اللوح',
-                suffixText: 'W',
-              ),
-              items: const [
-                400,
-                450,
-                500,
-                540,
-                550,
-                580,
-                600,
-              ]
-                  .map(
-                    (v) => DropdownMenuItem(
-                      value: v.toDouble(),
-                      child: Text('${v}W'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() {
-                    panelW = v;
-                  });
-                }
-              },
-            ),
-            sectionTitle(
-              'البطارية',
-              Icons.battery_full,
-            ),
-            DropdownButtonFormField<BatteryType>(
-              value: batteryType,
-              decoration: const InputDecoration(
-                labelText: 'نوع البطارية',
-              ),
-              items: BatteryType.values
-                  .map(
-                    (type) =>
-                        DropdownMenuItem(
-                      value: type,
-                      child: Text(
-                        batteryName(type),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    batteryType = value;
-                    updateBatteryDefaults();
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: batterySystem,
-              decoration: const InputDecoration(
-                labelText: 'نظام البطارية',
-              ),
-              items: const [
-                '12V',
-                '24V',
-                '48V',
-              ]
-                  .map(
-                    (v) => DropdownMenuItem(
-                      value: v,
-                      child: Text(v),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    batterySystem = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            resultCard(
-              title: 'جهد البطارية المستخدم',
-              value:
-                  '${f(voltageFor(
-                batteryType,
-                batterySystem,
-              ), 2)} V',
-              icon: Icons.bolt,
-            ),
-            numberField(
-              batteryAh,
-              'سعة البطارية الواحدة',
-              suffix: 'Ah',
-            ),
-            numberField(
-              dod,
-              'Depth of Discharge',
-              suffix: '%',
-            ),
-            numberField(
-              efficiency,
-              'كفاءة البطارية/التفريغ',
-              suffix: '%',
-            ),
-            numberField(
-              autonomy,
-              'زمن الاستقلالية',
-              suffix: 'h',
-            ),
-            sectionTitle(
-              'الإنفرتر',
-              Icons.power,
-            ),
-            numberField(
-              inverterMargin,
-              'هامش قدرة الإنفرتر',
-              suffix: '%',
-            ),
-            numberField(
-              surge,
-              'معامل حمل الإقلاع للمحركات',
-              suffix: '×',
-            ),
-            const SizedBox(height: 10),
-            resultCard(
-              title: 'الاستهلاك اليومي',
-              value: '${f(energy)} kWh',
-            ),
-            resultCard(
-              title: 'قدرة الألواح المطلوبة',
-              value: '${f(pvKW)} kWp',
-              icon: Icons.solar_power,
-            ),
-            resultCard(
-              title: 'عدد الألواح',
-              value: '$panels لوح',
-              icon: Icons.grid_view,
-            ),
-            resultCard(
-              title: 'قدرة الإنفرتر المقترحة',
-              value:
-                  '${f(inverterW / 1000)} kW',
-              icon: Icons.power,
-            ),
-            resultCard(
-              title: 'حمل الإقلاع النظري',
-              value:
-                  '${f(surgeW / 1000)} kW',
-              icon: Icons.flash_on,
-            ),
-            resultCard(
-              title:
-                  'طاقة البطارية الاسمية المطلوبة',
-              value:
-                  '${f(batteryKWh)} kWh',
-              icon: Icons.battery_full,
-            ),
-            resultCard(
-              title: 'عدد البطاريات',
-              value: '$batteryCount',
-              icon: Icons.battery_charging_full,
-            ),
-            resultCard(
-              title: 'إجمالي Ah',
-              value:
-                  '${f(totalAh)} Ah',
-              icon: Icons.battery_std,
-            ),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(14),
-                child: Text(
-                  'تنبيه هندسي:\n'
-                  'هذه حاسبة تصميم أولي. يجب مقارنة Voc/Vmp/Isc '
-                  'للألواح مع حدود MPPT الفعلية للإنفرتر، ومراجعة '
-                  'تيارات الإقلاع للمحركات والضواغط من الداتا شيت '
-                  'قبل التنفيذ.',
-                ),
+            _section('الاستهلاك', Icons.bolt),
+            _num(daily, 'الاستهلاك اليومي', 'kWh/day'),
+            _num(peak, 'الحمل الأقصى', 'W'),
+            _section('الألواح', Icons.solar_power),
+            _num(sun, 'ساعات الشمس', 'h'),
+            _num(loss, 'خسائر النظام', '%'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: DropdownButtonFormField<double>(
+                value: panelW,
+                decoration: const InputDecoration(
+                    labelText: 'قدرة اللوح', suffixText: 'W'),
+                items: const [400, 450, 500, 550, 600]
+                    .map((x) => DropdownMenuItem(
+                          value: x.toDouble(),
+                          child: Text('${x}W'),
+                        ))
+                    .toList(),
+                onChanged: (x) => setState(() => panelW = x ?? 550),
               ),
             ),
+            _section('البطارية', Icons.battery_full),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: DropdownButtonFormField<String>(
+                value: voltage,
+                decoration:
+                    const InputDecoration(labelText: 'جهد النظام'),
+                items: const ['12', '24', '48']
+                    .map((x) => DropdownMenuItem(
+                          value: x,
+                          child: Text('${x}V'),
+                        ))
+                    .toList(),
+                onChanged: (x) =>
+                    setState(() => voltage = x ?? '48'),
+              ),
+            ),
+            _num(bAh, 'سعة البطارية', 'Ah'),
+            _num(dod, 'DoD', '%'),
+            _num(eff, 'الكفاءة', '%'),
+            _num(auto, 'الاستقلالية', 'h'),
+            _section('الإنفرتر', Icons.power),
+            _num(margin, 'هامش التصميم', '%'),
+            _num(surge, 'معامل الإقلاع', '×'),
+            const SizedBox(height: 12),
+            _big('الألواح المطلوبة', '${fmt(pvKW)} kWp',
+                Icons.solar_power),
+            _big('عدد الألواح', '$panels لوح', Icons.grid_view),
+            _big('البطارية المطلوبة', '${fmt(battKWh)} kWh',
+                Icons.battery_full),
+            _big('عدد البطاريات', '$bCount',
+                Icons.battery_charging_full),
+            _big('إجمالي Ah', '${fmt(totalAh)} Ah',
+                Icons.battery_std),
+            _big('الإنفرتر', '${fmt(invKW)} kW', Icons.power),
+            _big('حمل الإقلاع', '${fmt(surgeKW)} kW',
+                Icons.flash_on),
           ],
         ),
       ),
     );
   }
-}
 
-// ============================================================
-// PANEL CALCULATOR
-// ============================================================
+  Widget _section(String t, IconData i) => Padding(
+        padding: const EdgeInsets.only(top: 14, bottom: 6),
+        child: Row(children: [
+          Icon(i, color: Colors.green.shade700),
+          const SizedBox(width: 8),
+          Text(t,
+              style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold)),
+        ]),
+      );
 
-class PanelCalculatorPage extends StatefulWidget {
-  const PanelCalculatorPage({super.key});
-
-  @override
-  State<PanelCalculatorPage> createState() =>
-      _PanelCalculatorPageState();
-}
-
-class _PanelCalculatorPageState
-    extends State<PanelCalculatorPage> {
-  final energy =
-      TextEditingController(text: '10');
-  final sun =
-      TextEditingController(text: '5.5');
-  final losses =
-      TextEditingController(text: '15');
-  final panel =
-      TextEditingController(text: '550');
-
-  final voc =
-      TextEditingController(text: '52.4');
-  final vmp =
-      TextEditingController(text: '42.3');
-  final isc =
-      TextEditingController(text: '14');
-  final imp =
-      TextEditingController(text: '13');
-
-  final mpptMin =
-      TextEditingController(text: '120');
-  final mpptMax =
-      TextEditingController(text: '450');
-  final maxVoc =
-      TextEditingController(text: '500');
-
-  @override
-  void dispose() {
-    energy.dispose();
-    sun.dispose();
-    losses.dispose();
-    panel.dispose();
-    voc.dispose();
-    vmp.dispose();
-    isc.dispose();
-    imp.dispose();
-    mpptMin.dispose();
-    mpptMax.dispose();
-    maxVoc.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final e = parse(energy.text);
-    final s = parse(sun.text);
-    final l = parse(losses.text) / 100;
-    final p = parse(panel.text);
-
-    final requiredKW =
-        s > 0
-            ? e /
-                (s *
-                    math.max(
-                      0.01,
-                      1 - l,
-                    ))
-            : 0;
-
-    final count =
-        p > 0
-            ? (requiredKW * 1000 / p).ceil()
-            : 0;
-
-    final vocV = parse(voc.text);
-    final vmpV = parse(vmp.text);
-    final mpptLow = parse(mpptMin.text);
-    final mpptHigh = parse(mpptMax.text);
-    final maxVocV = parse(maxVoc.text);
-
-    final seriesMin =
-        vmpV > 0
-            ? (mpptLow / vmpV).ceil()
-            : 0;
-
-    final seriesMax =
-        vocV > 0
-            ? math.min(
-                (mpptHigh / vmpV).floor(),
-                (maxVocV / vocV).floor(),
-              )
-            : 0;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'حاسبة الألواح',
+  Widget _num(TextEditingController c, String l, String s) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: TextField(
+          controller: c,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: l, suffixText: s),
         ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            sectionTitle(
-              'الطاقة اليومية',
-              Icons.bolt,
-            ),
-            numberField(
-              energy,
-              'الاستهلاك اليومي',
-              suffix: 'kWh/day',
-            ),
-            numberField(
-              sun,
-              'ساعات الشمس الفعالة',
-              suffix: 'h',
-            ),
-            numberField(
-              losses,
-              'خسائر النظام',
-              suffix: '%',
-            ),
-            numberField(
-              panel,
-              'قدرة اللوح',
-              suffix: 'W',
-            ),
-            sectionTitle(
-              'بيانات اللوح',
-              Icons.solar_power,
-            ),
-            numberField(
-              voc,
-              'Voc',
-              suffix: 'V',
-            ),
-            numberField(
-              vmp,
-              'Vmp',
-              suffix: 'V',
-            ),
-            numberField(
-              isc,
-              'Isc',
-              suffix: 'A',
-            ),
-            numberField(
-              imp,
-              'Imp',
-              suffix: 'A',
-            ),
-            sectionTitle(
-              'بيانات MPPT للإنفرتر',
-              Icons.tune,
-            ),
-            numberField(
-              mpptMin,
-              'أقل جهد MPPT',
-              suffix: 'V',
-            ),
-            numberField(
-              mpptMax,
-              'أعلى جهد MPPT',
-              suffix: 'V',
-            ),
-            numberField(
-              maxVoc,
-              'أقصى Voc للإنفرتر',
-              suffix: 'V',
-            ),
-            const SizedBox(height: 10),
-            resultCard(
-              title: 'قدرة PV المطلوبة',
-              value:
-                  '${f(requiredKW)} kWp',
-            ),
-            resultCard(
-              title: 'عدد الألواح',
-              value: '$count لوح',
-              icon: Icons.grid_view,
-            ),
-            resultCard(
-              title:
-                  'عدد الألواح Series المقترح',
-              value:
-                  '$seriesMin – $seriesMax',
-              subtitle:
-                  'يجب تأكيد التصميم النهائي مع درجات الحرارة '
-                  'وبيانات الداتا شيت.',
-              icon: Icons.linear_scale,
-            ),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(14),
-                child: Text(
-                  'الحساب لا يفترض أن كل الألواح متطابقة مع أي إنفرتر. '
-                  'يتم فحص نطاق MPPT وVoc، لكن يجب أيضاً فحص Isc/Imp '
-                  'والحد الأقصى لتيار كل MPPT.',
-                ),
-              ),
-            ),
-          ],
+      );
+
+  Widget _big(String t, String v, IconData i) => Card(
+        color: Colors.green.withOpacity(0.08),
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Icon(i, color: Colors.green.shade800, size: 30),
+            const SizedBox(width: 10),
+            Expanded(child: Text(t)),
+            Text(v,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800)),
+          ]),
         ),
-      ),
-    );
-  }
+      );
 }
 
 // ============================================================
-// BATTERY CALCULATOR
+// PANELS PAGE
 // ============================================================
-
-class BatteryCalculatorPage extends StatefulWidget {
-  const BatteryCalculatorPage({super.key});
+class PanelsPage extends StatefulWidget {
+  const PanelsPage({super.key});
 
   @override
-  State<BatteryCalculatorPage> createState() =>
-      _BatteryCalculatorPageState();
+  State<PanelsPage> createState() => _PanelsPageState();
 }
 
-class _BatteryCalculatorPageState
-    extends State<BatteryCalculatorPage> {
-  final load =
-      TextEditingController(text: '1000');
-  final hours =
-      TextEditingController(text: '8');
-  final ah =
-      TextEditingController(text: '100');
-  final dod = TextEditingController();
-  final efficiency = TextEditingController();
+class _PanelsPageState extends State<PanelsPage> {
+  final e = TextEditingController(text: '10');
+  final s = TextEditingController(text: '5.5');
+  final l = TextEditingController(text: '15');
+  final p = TextEditingController(text: '550');
+  final voc = TextEditingController(text: '52.4');
+  final vmp = TextEditingController(text: '42.3');
+  final isc = TextEditingController(text: '14');
+  final imp = TextEditingController(text: '13');
+  final mn = TextEditingController(text: '120');
+  final mx = TextEditingController(text: '450');
+  final mvoc = TextEditingController(text: '500');
+  final mc = TextEditingController(text: '20');
 
-  BatteryType type =
-      BatteryType.lithium;
-
-  String system = '48V';
+  final List<TextEditingController> _all = [];
 
   @override
   void initState() {
     super.initState();
-    update();
+    _all.addAll([e, s, l, p, voc, vmp, isc, imp, mn, mx, mvoc, mc]);
+    for (final c in _all) {
+      c.addListener(_onChange);
+    }
   }
 
-  void update() {
-    dod.text =
-        batteryDefaultDod(type).toString();
-    efficiency.text =
-        batteryDefaultEfficiency(type).toString();
+  void _onChange() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    load.dispose();
-    hours.dispose();
-    ah.dispose();
-    dod.dispose();
-    efficiency.dispose();
+    for (final c in _all) {
+      c.removeListener(_onChange);
+      c.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final loadW = parse(load.text);
-    final h = parse(hours.text);
-    final batteryAhValue = parse(ah.text);
-    final d = parse(dod.text) / 100;
-    final eff =
-        parse(efficiency.text) / 100;
+    final daily = parseNum(e.text);
+    final sun = parseNum(s.text);
+    final loss = parseNum(l.text) / 100;
+    final panelW = parseNum(p.text);
+    final vocV = parseNum(voc.text);
+    final vmpV = parseNum(vmp.text);
+    final iscV = parseNum(isc.text);
+    final impV = parseNum(imp.text);
+    final mpptMin = parseNum(mn.text);
+    final mpptMax = parseNum(mx.text);
+    final maxVoc = parseNum(mvoc.text);
+    final maxCur = parseNum(mc.text);
 
-    final voltage =
-        voltageFor(type, system);
+    final perf = math.max(0.01, 1 - loss);
+    final pvKW = sun > 0 ? daily / (sun * perf) : 0.0;
+    final count = panelW > 0 ? (pvKW * 1000 / panelW).ceil() : 0;
 
-    final backupWh =
-        loadW * h;
+    int seriesMin = 0, seriesMax = 0;
+    if (vmpV > 0 && vocV > 0) {
+      seriesMin = (mpptMin / vmpV).ceil();
+      seriesMax = math.min(
+          (mpptMax / vmpV).floor(), (maxVoc / vocV).floor());
+    }
+    final series = seriesMax > 0 ? seriesMax : 1;
+    final parallel = count > 0 ? (count / series).ceil() : 0;
 
-    final requiredKWh =
-        d > 0 && eff > 0
-            ? backupWh /
-                (d * eff) /
-                1000
-            : 0;
+    final totVoc = vocV * series;
+    final totVmp = vmpV * series;
+    final totIsc = iscV * parallel;
+    final totImp = impV * parallel;
 
-    final eachKWh =
-        batteryAhValue *
-            voltage /
-            1000;
+    final warnings = <String>[];
+    if (vmpV > 0 && (totVmp < mpptMin || totVmp > mpptMax)) {
+      warnings.add(
+          'Vmp الكلي (${fmt(totVmp)}V) خارج نافذة MPPT ($mpptMin–$mpptMax V)');
+    }
+    if (vocV > 0 && maxVoc > 0 && totVoc > maxVoc) {
+      warnings.add(
+          'Voc الكلي (${fmt(totVoc)}V) يتجاوز أقصى جهد PV (${fmt(maxVoc)}V)');
+    }
+    if (iscV > 0 && maxCur > 0 && totIsc > maxCur) {
+      warnings.add(
+          'Isc الكلي (${fmt(totIsc)}A) يتجاوز أقصى تيار (${fmt(maxCur)}A)');
+    }
 
-    final count =
-        eachKWh > 0
-            ? (requiredKWh /
-                    eachKWh)
-                .ceil()
-            : 0;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'حاسبة البطارية',
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('حاسبة الألواح')),
+        body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            sectionTitle(
-              'نوع البطارية',
-              Icons.battery_full,
-            ),
-            DropdownButtonFormField<BatteryType>(
-              value: type,
-              decoration:
-                  const InputDecoration(
-                labelText:
-                    'نوع البطارية',
-              ),
-              items: BatteryType.values
-                  .map(
-                    (x) =>
-                        DropdownMenuItem(
-                      value: x,
-                      child: Text(
-                        batteryName(x),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (x) {
-                if (x != null) {
-                  setState(() {
-                    type = x;
-                    update();
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: system,
-              decoration:
-                  const InputDecoration(
-                labelText:
-                    'نظام البطارية',
-              ),
-              items: const [
-                '12V',
-                '24V',
-                '48V',
-              ]
-                  .map(
-                    (x) =>
-                        DropdownMenuItem(
-                      value: x,
-                      child: Text(x),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (x) {
-                if (x != null) {
-                  setState(() {
-                    system = x;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            resultCard(
-              title:
-                  'الجهد المستخدم',
-              value:
-                  '${f(voltageFor(
-                type,
-                system,
-              ), 2)} V',
-            ),
-            sectionTitle(
-              'بيانات الحمل',
-              Icons.power,
-            ),
-            numberField(
-              load,
-              'الحمل أثناء فترة البطارية',
-              suffix: 'W',
-            ),
-            numberField(
-              hours,
-              'زمن التشغيل',
-              suffix: 'h',
-            ),
-            numberField(
-              ah,
-              'Ah للبطارية الواحدة',
-              suffix: 'Ah',
-            ),
-            numberField(
-              dod,
-              'DoD',
-              suffix: '%',
-            ),
-            numberField(
-              efficiency,
-              'كفاءة البطارية',
-              suffix: '%',
-            ),
-            const SizedBox(height: 10),
-            resultCard(
-              title:
-                  'الطاقة المطلوبة من الحمل',
-              value:
-                  '${f(backupWh / 1000)} kWh',
-            ),
-            resultCard(
-              title:
-                  'السعة الاسمية المطلوبة',
-              value:
-                  '${f(requiredKWh)} kWh',
-            ),
-            resultCard(
-              title:
-                  'طاقة البطارية الواحدة',
-              value:
-                  '${f(eachKWh)} kWh',
-            ),
-            resultCard(
-              title:
-                  'عدد البطاريات',
-              value: '$count',
-            ),
-            Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.all(14),
-                child: Text(
-                  type ==
-                          BatteryType.lithium
-                      ? 'Lithium: يجب الالتزام بحدود الشحن والتفريغ وBMS الخاصة بالموديل.'
-                      : type ==
-                              BatteryType.agm
-                          ? 'AGM: لا تستخدم Equalization إلا إذا نصت الشركة المصنعة على ذلك.'
-                          : 'FLD: تحتاج تهوية وصيانة ومتابعة مستوى الإلكتروليت حسب الشركة المصنعة.',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// INVERTER CALCULATOR
-// ============================================================
-
-class InverterCalculatorPage
-    extends StatefulWidget {
-  const InverterCalculatorPage({
-    super.key,
-  });
-
-  @override
-  State<InverterCalculatorPage>
-      createState() =>
-          _InverterCalculatorPageState();
-}
-
-class _InverterCalculatorPageState
-    extends State<InverterCalculatorPage> {
-  final load =
-      TextEditingController(text: '3000');
-  final margin =
-      TextEditingController(text: '20');
-  final surge =
-      TextEditingController(text: '2');
-
-  @override
-  void dispose() {
-    load.dispose();
-    margin.dispose();
-    surge.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final w = parse(load.text);
-    final m = parse(margin.text) / 100;
-    final s = parse(surge.text);
-
-    final recommended =
-        w * (1 + m);
-
-    final surgeW =
-        w * s;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'حاسبة الإنفرتر',
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            numberField(
-              load,
-              'الحمل المستمر',
-              suffix: 'W',
-            ),
-            numberField(
-              margin,
-              'هامش التصميم',
-              suffix: '%',
-            ),
-            numberField(
-              surge,
-              'معامل الإقلاع',
-              suffix: '×',
-            ),
-            const SizedBox(height: 10),
-            resultCard(
-              title:
-                  'الإنفرتر المستمر المقترح',
-              value:
-                  '${f(recommended / 1000)} kW',
-              icon: Icons.power,
-            ),
-            resultCard(
-              title:
-                  'قدرة Surge النظرية',
-              value:
-                  '${f(surgeW / 1000)} kW',
-              icon: Icons.flash_on,
-            ),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(14),
-                child: Text(
-                  'معامل Surge ليس قيمة ثابتة لكل الأجهزة. '
-                  'المحركات والضواغط قد تحتاج بيانات تيار البدء من لوحة المحرك '
-                  'أو الداتا شيت للحصول على نتيجة أدق.',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// MARKET DATA MODEL
-// ============================================================
-
-enum QualityLevel {
-  premium,
-  mid,
-  economy,
-}
-
-class InverterProduct {
-  final String brand;
-  final QualityLevel level;
-  final String model;
-  final String type;
-  final double powerKW;
-  final String phase;
-  final String battery;
-  final String batteryRange;
-  final String maxPv;
-  final String maxPvVoltage;
-  final String mpptRange;
-  final String mppt;
-  final String pvCurrent;
-  final String acVoltage;
-  final String acFrequency;
-  final String maxOutputCurrent;
-  final String efficiency;
-  final String surge;
-  final String communication;
-  final String protection;
-  final String cooling;
-  final String temperature;
-  final String altitude;
-  final String dimensions;
-  final String weight;
-  final String ip;
-  final String warranty;
-  final double? priceUsd;
-  final String priceNote;
-  final String datasheetUrl;
-
-  const InverterProduct({
-    required this.brand,
-    required this.level,
-    required this.model,
-    required this.type,
-    required this.powerKW,
-    required this.phase,
-    required this.battery,
-    required this.batteryRange,
-    required this.maxPv,
-    required this.maxPvVoltage,
-    required this.mpptRange,
-    required this.mppt,
-    required this.pvCurrent,
-    required this.acVoltage,
-    required this.acFrequency,
-    required this.maxOutputCurrent,
-    required this.efficiency,
-    required this.surge,
-    required this.communication,
-    required this.protection,
-    required this.cooling,
-    required this.temperature,
-    required this.altitude,
-    required this.dimensions,
-    required this.weight,
-    required this.ip,
-    required this.warranty,
-    required this.priceUsd,
-    required this.priceNote,
-    required this.datasheetUrl,
-  });
-}
-
-// ============================================================
-// MARKET DATABASE
-// ============================================================
-
-final List<String> premiumBrands = [
-  'Solis',
-  'Deye',
-  'FusionSolar / Huawei',
-];
-
-final List<String> midBrands = [
-  'GSB',
-  'Motoma',
-  'Felicity Solar',
-  'MUST',
-];
-
-final List<String> economyBrands = [
-  'VACKSON',
-  'Restar',
-  'Eruonet',
-  'Megasun',
-];
-
-final List<InverterProduct> products = [
-  InverterProduct(
-    brand: 'Solis',
-    level: QualityLevel.premium,
-    model: 'S6-EH1P6K-L-PLUS',
-    type: 'Hybrid',
-    powerKW: 6,
-    phase: 'Single Phase',
-    battery: '48V / Low Voltage',
-    batteryRange: 'حسب إصدار البطارية',
-    maxPv: '9.6 kW usable',
-    maxPvVoltage: '500 V',
-    mpptRange: '90–435 V',
-    mppt: '2 MPPT / حتى 4 strings',
-    pvCurrent: 'حسب إصدار MPPT',
-    acVoltage: '220/230/240 V',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent: 'حسب الداتا شيت',
-    efficiency: '97.5% تقريباً',
-    surge: 'حسب الإصدار',
-    communication:
-        'WiFi / RS485 / CAN حسب التكوين',
-    protection:
-        'حماية DC/AC حسب الإصدار',
-    cooling: 'Fan / حسب الإصدار',
-    temperature: 'حسب الداتا شيت',
-    altitude: 'حسب الداتا شيت',
-    dimensions: 'حسب الداتا شيت',
-    weight: 'حسب الداتا شيت',
-    ip: 'حسب الإصدار',
-    warranty: 'حسب السوق والموديل',
-    priceUsd: 875,
-    priceNote:
-        'سعر مرجعي من متجر خارجي، وليس سعراً سودانياً ثابتاً.',
-    datasheetUrl:
-        'https://www.solisinverters.com/us/downloadcenter.html',
-  ),
-  InverterProduct(
-    brand: 'Deye',
-    level: QualityLevel.premium,
-    model: 'SUN-6K-SG05LP1-EU',
-    type: 'Hybrid',
-    powerKW: 6,
-    phase: 'Single Phase',
-    battery: 'Low Voltage',
-    batteryRange: 'حسب إصدار البطارية',
-    maxPv: 'حسب الداتا شيت',
-    maxPvVoltage: 'حسب الداتا شيت',
-    mpptRange: 'حسب الداتا شيت',
-    mppt: 'حسب الداتا شيت',
-    pvCurrent: 'حسب الداتا شيت',
-    acVoltage: '220/230 V',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent: 'حسب الداتا شيت',
-    efficiency: 'حسب الإصدار',
-    surge: 'حسب الداتا شيت',
-    communication:
-        'CAN / RS485 / WiFi حسب الإصدار',
-    protection: 'حسب الداتا شيت',
-    cooling: 'Fan',
-    temperature: 'حسب الداتا شيت',
-    altitude: 'حسب الداتا شيت',
-    dimensions: 'حسب الداتا شيت',
-    weight: 'حسب الداتا شيت',
-    ip: 'حسب الإصدار',
-    warranty: '5 سنوات لبعض العروض',
-    priceUsd: 1671,
-    priceNote:
-        'سعر مرجعي لإصدار SUN-6K-SG05LP1-EU؛ السعر يختلف حسب المورد والكمية.',
-    datasheetUrl:
-        'https://www.deyeinverter.com/download/product-2/',
-  ),
-  InverterProduct(
-    brand: 'FusionSolar / Huawei',
-    level: QualityLevel.premium,
-    model: 'SUN2000-6KTL-L1',
-    type: 'Smart Energy Controller',
-    powerKW: 6,
-    phase: 'Single Phase',
-    battery: 'High Voltage',
-    batteryRange: '350–560 V DC',
-    maxPv: '9 kWp recommended',
-    maxPvVoltage: '600 V',
-    mpptRange: '90–560 V',
-    mppt: '2 MPPT',
-    pvCurrent: '12.5 A / MPPT',
-    acVoltage: '220/230/240 V',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent: '27.3 A',
-    efficiency: '98.4%',
-    surge: 'حسب النظام',
-    communication:
-        'RS485 / WLAN / Ethernet optional / 4G optional',
-    protection:
-        'DC/AC SPD Type II, AFCI, anti-islanding وغيرها',
-    cooling: 'Natural Convection',
-    temperature: '-25 إلى +60°C',
-    altitude: '0–4000 m',
-    dimensions:
-        '365 × 375 × 156 mm',
-    weight: '12 kg',
-    ip: 'IP65',
-    warranty: 'حسب السوق',
-    priceUsd: null,
-    priceNote:
-        'لم أضع سعراً غير موثق لهذا الموديل. أضف سعر المورد عند توفره.',
-    datasheetUrl:
-        'https://solar.huawei.com/en/products/SUN2000-3-4-5-6KTL-L1/specs/',
-  ),
-  InverterProduct(
-    brand: 'GSB',
-    level: QualityLevel.mid,
-    model: 'GSB 6kW — حسب الموديل',
-    type: 'Hybrid / Off-grid',
-    powerKW: 6,
-    phase: 'حسب الموديل',
-    battery: 'حسب الموديل',
-    batteryRange:
-        'يحدد من الداتا شيت',
-    maxPv: 'يحدد من الداتا شيت',
-    maxPvVoltage:
-        'يحدد من الداتا شيت',
-    mpptRange:
-        'يحدد من الداتا شيت',
-    mppt: 'يحدد من الداتا شيت',
-    pvCurrent:
-        'يحدد من الداتا شيت',
-    acVoltage: 'حسب الموديل',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency: 'حسب الموديل',
-    surge: 'حسب الموديل',
-    communication: 'حسب الموديل',
-    protection: 'حسب الموديل',
-    cooling: 'حسب الموديل',
-    temperature: 'حسب الموديل',
-    altitude: 'حسب الموديل',
-    dimensions: 'حسب الموديل',
-    weight: 'حسب الموديل',
-    ip: 'حسب الموديل',
-    warranty: 'حسب المورد',
-    priceUsd: null,
-    priceNote:
-        'السعر يضاف بعد تحديد موديل GSB بالضبط.',
-    datasheetUrl: '',
-  ),
-  InverterProduct(
-    brand: 'Motoma',
-    level: QualityLevel.mid,
-    model: 'Motoma 48V 6000W',
-    type: 'Solar Inverter',
-    powerKW: 6,
-    phase: 'Single Phase',
-    battery: '48V',
-    batteryRange: '48V',
-    maxPv: '6 kW',
-    maxPvVoltage: '500 V Voc',
-    mpptRange: '60–450 V',
-    mppt: 'MPPT',
-    pvCurrent: 'حسب الداتا شيت',
-    acVoltage: '220/230 V',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency: 'حسب الموديل',
-    surge: 'حسب الموديل',
-    communication:
-        'RS485 / USB / حسب الإصدار',
-    protection: 'حسب الداتا شيت',
-    cooling: 'Fan',
-    temperature: 'حسب الداتا شيت',
-    altitude: 'حسب الداتا شيت',
-    dimensions: 'حسب الداتا شيت',
-    weight: 'حسب الداتا شيت',
-    ip: 'حسب الداتا شيت',
-    warranty: 'حسب المورد',
-    priceUsd: null,
-    priceNote:
-        'السعر يضاف بعد تحديد عرض المورد.',
-    datasheetUrl:
-        'https://motoma.com/',
-  ),
-  InverterProduct(
-    brand: 'Felicity Solar',
-    level: QualityLevel.mid,
-    model: 'IVAM6048P1G1',
-    type: 'Off-grid',
-    powerKW: 6,
-    phase: 'Single Phase',
-    battery: '48V',
-    batteryRange: '40–60 V',
-    maxPv: '9.6 kW',
-    maxPvVoltage: '500 V',
-    mpptRange: '90–425 V',
-    mppt: '2 MPPT',
-    pvCurrent: '20A + 20A',
-    acVoltage: '230 V',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent: '26.1 A',
-    efficiency: '97.6%',
-    surge:
-        '2× لمدة 10 ثوانٍ حسب الداتا',
-    communication: 'حسب الإصدار',
-    protection: 'حسب الداتا شيت',
-    cooling: 'Fan',
-    temperature: 'حسب الداتا شيت',
-    altitude: 'حسب الداتا شيت',
-    dimensions: 'حسب الداتا شيت',
-    weight: 'حسب الداتا شيت',
-    ip: 'حسب الداتا شيت',
-    warranty: 'حسب السوق',
-    priceUsd: 495,
-    priceNote:
-        'سعر مرجعي من متجر خارجي؛ يوجد اختلاف حسب الموديل والمورد.',
-    datasheetUrl:
-        'https://felicitysolar.me/en/products/inverters/ivam6048p1g1',
-  ),
-  InverterProduct(
-    brand: 'MUST',
-    level: QualityLevel.mid,
-    model: 'MUST 6kW 48V',
-    type: 'Off-grid / Solar',
-    powerKW: 6,
-    phase: 'Single Phase',
-    battery: '24/48V حسب الموديل',
-    batteryRange: 'حسب الموديل',
-    maxPv: 'حسب الموديل',
-    maxPvVoltage:
-        'حسب الموديل',
-    mpptRange: 'حسب الموديل',
-    mppt: 'حسب الموديل',
-    pvCurrent: 'حسب الموديل',
-    acVoltage: '220–240 V',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency:
-        '93% في عرض PV3500',
-    surge: 'حسب الموديل',
-    communication:
-        'USB / RS485 / WiFi optional',
-    protection: 'حسب الموديل',
-    cooling: 'Fan',
-    temperature:
-        'حسب الداتا شيت',
-    altitude: 'حسب الداتا شيت',
-    dimensions:
-        '670 × 410 × 215 mm في العرض المذكور',
-    weight: 'حسب الموديل',
-    ip: 'حسب الموديل',
-    warranty: 'حسب المورد',
-    priceUsd: 460,
-    priceNote:
-        'سعر مرجعي لعرض 6kW؛ لا يمثل جميع موديلات MUST.',
-    datasheetUrl:
-        'https://www.mustpower.com/',
-  ),
-  InverterProduct(
-    brand: 'VACKSON',
-    level: QualityLevel.economy,
-    model: 'VACKSON — حسب الموديل',
-    type: 'Hybrid / Off-grid',
-    powerKW: 6,
-    phase: 'حسب الموديل',
-    battery: 'حسب الموديل',
-    batteryRange:
-        'يحدد من الداتا شيت',
-    maxPv: 'يحدد من الداتا شيت',
-    maxPvVoltage:
-        'يحدد من الداتا شيت',
-    mpptRange:
-        'يحدد من الداتا شيت',
-    mppt: 'يحدد من الداتا شيت',
-    pvCurrent:
-        'يحدد من الداتا شيت',
-    acVoltage: 'حسب الموديل',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency: 'حسب الموديل',
-    surge: 'حسب الموديل',
-    communication: 'حسب الموديل',
-    protection: 'حسب الموديل',
-    cooling: 'حسب الموديل',
-    temperature: 'حسب الموديل',
-    altitude: 'حسب الموديل',
-    dimensions: 'حسب الموديل',
-    weight: 'حسب الموديل',
-    ip: 'حسب الموديل',
-    warranty: 'حسب المورد',
-    priceUsd: null,
-    priceNote:
-        'السعر والمواصفات تحتاج رقم الموديل.',
-    datasheetUrl: '',
-  ),
-  InverterProduct(
-    brand: 'Restar',
-    level: QualityLevel.economy,
-    model:
-        'Restar RT-HY / RT-I — حسب الموديل',
-    type: 'Hybrid / Off-grid',
-    powerKW: 6,
-    phase: 'حسب الموديل',
-    battery: 'حسب الموديل',
-    batteryRange:
-        'حسب الموديل',
-    maxPv: 'حسب الموديل',
-    maxPvVoltage:
-        'حسب الموديل',
-    mpptRange:
-        'حسب الموديل',
-    mppt: 'حسب الموديل',
-    pvCurrent:
-        'حسب الموديل',
-    acVoltage: 'حسب الموديل',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency: 'حسب الموديل',
-    surge: 'حسب الموديل',
-    communication:
-        'حسب الموديل',
-    protection: 'حسب الموديل',
-    cooling: 'حسب الموديل',
-    temperature:
-        'حسب الموديل',
-    altitude: 'حسب الموديل',
-    dimensions:
-        'حسب الموديل',
-    weight: 'حسب الموديل',
-    ip: 'حسب الموديل',
-    warranty: 'حسب المورد',
-    priceUsd: null,
-    priceNote:
-        'السعر يعتمد على الموديل والعرض.',
-    datasheetUrl:
-        'https://www.restarsolar.com/download/index_20.html',
-  ),
-  InverterProduct(
-    brand: 'Eruonet',
-    level: QualityLevel.economy,
-    model:
-        'Eruonet — حسب الموديل',
-    type: 'Solar Inverter',
-    powerKW: 6,
-    phase: 'حسب الموديل',
-    battery: 'حسب الموديل',
-    batteryRange:
-        'حسب الموديل',
-    maxPv: 'حسب الموديل',
-    maxPvVoltage:
-        'حسب الموديل',
-    mpptRange:
-        'حسب الموديل',
-    mppt: 'حسب الموديل',
-    pvCurrent:
-        'حسب الموديل',
-    acVoltage:
-        'حسب الموديل',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency:
-        'حسب الموديل',
-    surge: 'حسب الموديل',
-    communication:
-        'حسب الموديل',
-    protection:
-        'حسب الموديل',
-    cooling:
-        'حسب الموديل',
-    temperature:
-        'حسب الموديل',
-    altitude:
-        'حسب الموديل',
-    dimensions:
-        'حسب الموديل',
-    weight:
-        'حسب الموديل',
-    ip:
-        'حسب الموديل',
-    warranty:
-        'حسب المورد',
-    priceUsd: null,
-    priceNote:
-        'أدخل الموديل للحصول على Data Sheet دقيقة.',
-    datasheetUrl: '',
-  ),
-  InverterProduct(
-    brand: 'Megasun',
-    level: QualityLevel.economy,
-    model:
-        'Megasun — حسب الموديل',
-    type: 'Solar Inverter',
-    powerKW: 6,
-    phase: 'حسب الموديل',
-    battery: 'حسب الموديل',
-    batteryRange:
-        'حسب الموديل',
-    maxPv: 'حسب الموديل',
-    maxPvVoltage:
-        'حسب الموديل',
-    mpptRange:
-        'حسب الموديل',
-    mppt: 'حسب الموديل',
-    pvCurrent:
-        'حسب الموديل',
-    acVoltage:
-        'حسب الموديل',
-    acFrequency: '50/60 Hz',
-    maxOutputCurrent:
-        'حسب الموديل',
-    efficiency:
-        'حسب الموديل',
-    surge:
-        'حسب الموديل',
-    communication:
-        'حسب الموديل',
-    protection:
-        'حسب الموديل',
-    cooling:
-        'حسب الموديل',
-    temperature:
-        'حسب الموديل',
-    altitude:
-        'حسب الموديل',
-    dimensions:
-        'حسب الموديل',
-    weight:
-        'حسب الموديل',
-    ip:
-        'حسب الموديل',
-    warranty:
-        'حسب المورد',
-    priceUsd: null,
-    priceNote:
-        'أدخل الموديل للحصول على Data Sheet دقيقة.',
-    datasheetUrl: '',
-  ),
-];
-
-// ============================================================
-// MARKET PAGE
-// ============================================================
-
-class MarketPage extends StatefulWidget {
-  const MarketPage({super.key});
-
-  @override
-  State<MarketPage> createState() =>
-      _MarketPageState();
-}
-
-class _MarketPageState
-    extends State<MarketPage> {
-  QualityLevel? filter;
-
-  @override
-  Widget build(BuildContext context) {
-    final list = filter == null
-        ? products
-        : products
-            .where(
-              (p) => p.level == filter,
-            )
-            .toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'سوق SUDANSO',
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
-          padding:
-              const EdgeInsets.all(14),
-          children: [
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(15),
-                child: Text(
-                  'أسعار المنتجات بالدولار الأمريكي فقط.\n'
-                  'الأسعار المرجعية قابلة للتغير حسب المورد والكمية والشحن.',
-                  style: TextStyle(
-                    fontWeight:
-                        FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                FilterChip(
-                  label:
-                      const Text('الكل'),
-                  selected:
-                      filter == null,
-                  onSelected: (_) {
-                    setState(() {
-                      filter = null;
-                    });
-                  },
-                ),
-                FilterChip(
-                  label:
-                      const Text('Premium'),
-                  selected:
-                      filter ==
-                          QualityLevel
-                              .premium,
-                  onSelected: (_) {
-                    setState(() {
-                      filter =
-                          QualityLevel.premium;
-                    });
-                  },
-                ),
-                FilterChip(
-                  label:
-                      const Text('Mid-range'),
-                  selected:
-                      filter ==
-                          QualityLevel.mid,
-                  onSelected: (_) {
-                    setState(() {
-                      filter =
-                          QualityLevel.mid;
-                    });
-                  },
-                ),
-                FilterChip(
-                  label:
-                      const Text('Economy'),
-                  selected:
-                      filter ==
-                          QualityLevel.economy,
-                  onSelected: (_) {
-                    setState(() {
-                      filter =
-                          QualityLevel.economy;
-                    });
-                  },
-                ),
-              ],
-            ),
-            sectionTitle(
-              'البراندات الموجودة في السوق',
-              Icons.store,
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...premiumBrands.map(
-                  (x) => Chip(
-                    avatar:
-                        const Icon(
-                      Icons
-                          .workspace_premium,
-                      size: 18,
-                    ),
-                    label: Text(x),
-                  ),
-                ),
-                ...midBrands.map(
-                  (x) => Chip(
-                    label: Text(x),
-                  ),
-                ),
-                ...economyBrands.map(
-                  (x) => Chip(
-                    label: Text(x),
-                  ),
-                ),
-              ],
-            ),
-            sectionTitle(
-              'المنتجات',
-              Icons.inventory_2,
-            ),
-            ...list.map(
-              (product) => Card(
-                clipBehavior:
-                    Clip.antiAlias,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ProductDetailsPage(
-                          product: product,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.all(
-                      15,
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor:
-                                  Colors.green
-                                      .shade50,
-                              child: Icon(
-                                Icons.power,
-                                color: Colors
-                                    .green
-                                    .shade700,
-                              ),
-                            ),
-                            const SizedBox(
-                              width: 10,
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start,
-                                children: [
-                                  Text(
-                                    product
-                                        .brand,
-                                    style:
-                                        TextStyle(
-                                      color: Colors
-                                          .green
-                                          .shade800,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    product
-                                        .model,
-                                    style:
-                                        const TextStyle(
-                                      fontSize: 17,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              '${f(product.powerKW, 0)} kW',
-                              style:
-                                  const TextStyle(
-                                fontWeight:
-                                    FontWeight
-                                        .bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                product.type,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                product.battery,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 8,
-                        ),
-                        if (product.priceUsd !=
-                            null)
-                          Text(
-                            '\$${f(product.priceUsd!, 0)} USD',
-                            style:
-                                TextStyle(
-                              color: Colors
-                                  .green
-                                  .shade800,
-                              fontSize: 19,
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-                            ),
-                          )
-                        else
-                          const Text(
-                            'السعر: غير مضاف',
-                            style:
-                                TextStyle(
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-                            ),
-                          ),
-                        const SizedBox(
-                          height: 6,
-                        ),
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons
-                                  .description_outlined,
-                            ),
-                            SizedBox(
-                              width: 5,
-                            ),
-                            Text(
-                              'فتح Data Sheet',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// PRODUCT DATA SHEET PAGE
-// ============================================================
-
-class ProductDetailsPage
-    extends StatelessWidget {
-  final InverterProduct product;
-
-  const ProductDetailsPage({
-    super.key,
-    required this.product,
-  });
-
-  Widget row(
-    String title,
-    String value,
-  ) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 11,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey.shade200,
-          ),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 145,
-            child: Text(
-              title,
-              style:
-                  const TextStyle(
-                fontWeight:
-                    FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final price =
-        product.priceUsd == null
-            ? 'غير متوفر'
-            : '\$${f(product.priceUsd!, 0)} USD';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(product.brand),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: ListView(
-          padding:
-              const EdgeInsets.all(14),
-          children: [
-            Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.all(18),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.solar_power,
-                      size: 65,
-                      color: Colors.orange,
-                    ),
-                    const SizedBox(
-                      height: 8,
-                    ),
-                    Text(
-                      product.brand,
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors
-                            .green
-                            .shade800,
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      product.model,
-                      textAlign:
-                          TextAlign.center,
-                      style:
-                          const TextStyle(
-                        fontSize: 22,
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors
-                            .green
-                            .shade800,
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            sectionTitle(
-              'البيانات الأساسية',
-              Icons.info_outline,
-            ),
-            Card(
-              child: Column(
-                children: [
-                  row(
-                    'الشركة',
-                    product.brand,
-                  ),
-                  row(
-                    'الموديل',
-                    product.model,
-                  ),
-                  row(
-                    'التصنيف',
-                    product.type,
-                  ),
-                  row(
-                    'القدرة',
-                    '${f(product.powerKW, 0)} kW',
-                  ),
-                  row(
-                    'الطور',
-                    product.phase,
-                  ),
-                  row(
-                    'البطارية',
-                    product.battery,
-                  ),
-                  row(
-                    'نطاق البطارية',
-                    product.batteryRange,
-                  ),
-                ],
-              ),
-            ),
-            sectionTitle(
-              'PV / MPPT',
-              Icons.solar_power,
-            ),
-            Card(
-              child: Column(
-                children: [
-                  row(
-                    'Max PV',
-                    product.maxPv,
-                  ),
-                  row(
-                    'Max PV Voltage',
-                    product.maxPvVoltage,
-                  ),
-                  row(
-                    'MPPT Range',
-                    product.mpptRange,
-                  ),
-                  row(
-                    'MPPT',
-                    product.mppt,
-                  ),
-                  row(
-                    'PV Current',
-                    product.pvCurrent,
-                  ),
-                ],
-              ),
-            ),
-            sectionTitle(
-              'AC Output',
-              Icons.power,
-            ),
-            Card(
-              child: Column(
-                children: [
-                  row(
-                    'AC Voltage',
-                    product.acVoltage,
-                  ),
-                  row(
-                    'Frequency',
-                    product.acFrequency,
-                  ),
-                  row(
-                    'Max Output Current',
-                    product.maxOutputCurrent,
-                  ),
-                  row(
-                    'Efficiency',
-                    product.efficiency,
-                  ),
-                  row(
-                    'Surge',
-                    product.surge,
-                  ),
-                ],
-              ),
-            ),
-            sectionTitle(
-              'Communication & Protection',
-              Icons.security,
-            ),
-            Card(
-              child: Column(
-                children: [
-                  row(
-                    'Communication',
-                    product.communication,
-                  ),
-                  row(
-                    'Protection',
-                    product.protection,
-                  ),
-                ],
-              ),
-            ),
-            sectionTitle(
-              'البيانات الفيزيائية',
-              Icons.straighten,
-            ),
-            Card(
-              child: Column(
-                children: [
-                  row(
-                    'Cooling',
-                    product.cooling,
-                  ),
-                  row(
-                    'Temperature',
-                    product.temperature,
-                  ),
-                  row(
-                    'Altitude',
-                    product.altitude,
-                  ),
-                  row(
-                    'Dimensions',
-                    product.dimensions,
-                  ),
-                  row(
-                    'Weight',
-                    product.weight,
-                  ),
-                  row(
-                    'IP Rating',
-                    product.ip,
-                  ),
-                  row(
-                    'Warranty',
-                    product.warranty,
-                  ),
-                ],
-              ),
-            ),
-            sectionTitle(
-              'السعر',
-              Icons.attach_money,
-            ),
-            Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight:
-                            FontWeight.bold,
-                        color: Colors
-                            .green
-                            .shade800,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 8,
-                    ),
-                    Text(
-                      product.priceNote,
-                      textAlign:
-                          TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (product.datasheetUrl
-                .isNotEmpty)
+            _num(e, 'الاستهلاك اليومي', 'kWh'),
+            _num(s, 'ساعات الشمس', 'h'),
+            _num(l, 'خسائر النظام', '%'),
+            _num(p, 'قدرة اللوح', 'W'),
+            _num(voc, 'Voc', 'V'),
+            _num(vmp, 'Vmp', 'V'),
+            _num(isc, 'Isc', 'A'),
+            _num(imp, 'Imp', 'A'),
+            _num(mn, 'أقل جهد MPPT', 'V'),
+            _num(mx, 'أعلى جهد MPPT', 'V'),
+            _num(mvoc, 'أقصى Voc للإنفرتر', 'V'),
+            _num(mc, 'أقصى تيار PV', 'A'),
+            const SizedBox(height: 12),
+            _big('PV المطلوبة', '${fmt(pvKW)} kWp'),
+            _big('عدد الألواح', '$count لوح'),
+            _big('نطاق Series', '$seriesMin – $seriesMax'),
+            _big('المقترح', '$series × $parallel'),
+            _big('إجمالي Voc', '${fmt(totVoc)} V'),
+            _big('إجمالي Vmp', '${fmt(totVmp)} V'),
+            _big('إجمالي Isc', '${fmt(totIsc)} A'),
+            _big('إجمالي Imp', '${fmt(totImp)} A'),
+            if (warnings.isNotEmpty)
               Card(
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.picture_as_pdf,
-                    color: Colors.red,
+                color: Colors.red.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('تحذيرات:',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red)),
+                      const SizedBox(height: 6),
+                      ...warnings.map((w) => Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 2),
+                            child: Text('• $w',
+                                style: TextStyle(
+                                    color: Colors.red.shade800)),
+                          )),
+                    ],
                   ),
-                  title: const Text(
-                    'الداتا شيت الأصلية',
-                    style: TextStyle(
-                      fontWeight:
-                          FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    product.datasheetUrl,
-                    maxLines: 2,
-                    overflow:
-                        TextOverflow.ellipsis,
-                  ),
-                  trailing:
-                      const Icon(
-                    Icons.open_in_new,
-                  ),
-                  onTap: () {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'يمكن ربط هذا الزر بفتح الرابط الخارجي باستخدام url_launcher.',
-                        ),
-                      ),
-                    );
-                  },
                 ),
               ),
-            const SizedBox(
-              height: 20,
-            ),
-            const Card(
-              child: Padding(
-                padding:
-                    EdgeInsets.all(14),
-                child: Text(
-                  'مهم: بيانات الداتا شيت تختلف حسب الموديل والإصدار. '
-                  'أي قيمة مكتوب أمامها "حسب الموديل" لا ينبغي استخدامها '
-                  'في التصميم النهائي قبل الرجوع إلى ملف الشركة المصنعة.',
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
+
+  Widget _num(TextEditingController c, String l, String s) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: TextField(
+          controller: c,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: l, suffixText: s),
+        ),
+      );
+
+  Widget _big(String t, String v) => Card(
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        child: ListTile(
+          title: Text(t),
+          trailing: Text(v,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+      );
 }
+
+// ============================================================
+// BATTERY PAGE
+// ============================================================
+class BatteryPage extends StatefulWidget {
+  const BatteryPage({super.key});
+
+  @override
+  State<BatteryPage> createState() => _BatteryPageState();
+}
+
+class _BatteryPageState extends State<BatteryPage> {
+  final load = TextEditingController(text: '1000');
+  final hours = TextEditingController(text: '8');
+  final ah = TextEditingController(text: '100');
+  final dod = TextEditingController(text: '80');
+  final eff = TextEditingController(text: '95');
+  String voltage = '48';
+  String type = 'Lithium';
+
+  final List<TextEditingController> _all = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _all.addAll([load, hours, ah, dod, eff]);
+    for (final c in _all) {
+      c.addListener(_onChange);
+    }
+  }
+
+  void _onChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final c in _all) {
+      c.removeListener(_onChange);
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _applyTypeDefaults(String t) {
+    setState(() {
+      type = t;
+      if (t == 'Lithium') {
+        dod.text = '80';
+        eff.text = '95';
+      } else if (t == 'AGM') {
+        dod.text = '50';
+        eff.text = '90';
+      } else {
+        dod.text = '50';
+        eff.text = '85';
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = parseNum(load.text);
+    final h = parseNum(hours.text);
+    final ahV = parseNum(ah.text);
+    final d = parseNum(dod.text) / 100;
+    final ef = parseNum(eff.text) / 100;
+    final v = double.tryParse(voltage) ?? 48;
+
+    final backupWh = w * h;
+    final requiredKWh =
+        (d > 0 && ef > 0) ? backupWh / (d * ef) / 1000 : 0.0;
+    final oneKWh = ahV * v / 1000;
+    final count = oneKWh > 0 ? (requiredKWh / oneKWh).ceil() : 0;
+    final totalAh = count * ahV;
+    final totalKWh = count * oneKWh;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('حاسبة البطارية')),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: DropdownButtonFormField<String>(
+                value: type,
+                decoration:
+                    const InputDecoration(labelText: 'نوع البطارية'),
+                items: const ['Lithium', 'AGM', 'FLD']
+                    .map((x) => DropdownMenuItem(
+                          value: x,
+                          child: Text(x),
+                        ))
+                    .toList(),
+                onChanged: (x) => _applyTypeDefaults(x ?? 'Lithium'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: DropdownButtonFormField<String>(
+                value: voltage,
+                decoration:
+                    const InputDecoration(labelText: 'جهد النظام'),
+                items: const ['12', '24', '48']
+                    .map((x) => DropdownMenuItem(
+                          value: x,
+                          child: Text('${x}V'),
+                        ))
+                    .toList(),
+                onChanged: (x) =>
+                    setState(() => voltage = x ?? '48'),
+              ),
+            ),
+            _num(load, 'الحمل', 'W'),
+            _num(hours, 'زمن التشغيل', 'h'),
+            _num(ah, 'سعة البطارية', 'Ah'),
+            _num(dod, 'DoD', '%'),
+            _num(eff, 'الكفاءة', '%'),
+            const SizedBox(height: 12),
+            _big('الطاقة المطلوبة', '${fmt(backupWh / 1000)} kWh'),
+            _big('السعة الاسمية', '${fmt(requiredKWh)} kWh'),
+            _big('البطارية الواحدة', '${fmt(oneKWh)} kWh'),
+            _big('عدد البطاريات', '$count'),
+            _big('إجمالي Ah', '${fmt(totalAh)} Ah'),
+            _big('إجمالي kWh', '${fmt(totalKWh)} kWh'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _num(TextEditingController c, String l, String s) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: TextField(
+          controller: c,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: l, suffixText: s),
+        ),
+      );
+
+  Widget _big(String t, String v) => Card(
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        child: ListTile(
+          title: Text(t),
+          trailing: Text(v,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+      );
+}
+
+// ============================================================
+// INVERTER PAGE
+// ============================================================
+class InverterPage extends StatefulWidget {
+  const InverterPage({super.key});
+
+  @override
+  State<InverterPage> createState() => _InverterPageState();
+}
+
+class _InverterPageState extends State<InverterPage> {
+  final load = TextEditingController(text: '3000');
+  final margin = TextEditingController(text: '20');
+  final surge = TextEditingController(text: '3');
+
+  final List<TextEditingController> _all = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _all.addAll([load, margin, surge]);
+    for (final c in _all) {
+      c.addListener(_onChange);
+    }
+  }
+
+  void _onChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final c in _all) {
+      c.removeListener(_onChange);
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = parseNum(load.text);
+    final m = parseNum(margin.text) / 100;
+    final s = parseNum(surge.text);
+    final recommended = w * (1 + m);
+    final surgeW = w * s;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('حاسبة الإنفرتر')),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _num(load, 'الحمل المستمر', 'W
