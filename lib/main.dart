@@ -3,11 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ============================================================
-// SUDANSO — Solar Energy Platform
-// Single File Build
-// ============================================================
-
 void main() => runApp(const SudansoApp());
 
 class SudansoApp extends StatelessWidget {
@@ -32,7 +27,7 @@ class SudansoApp extends StatelessWidget {
           backgroundColor: Color(0xFF1B8A4A),
           foregroundColor: Colors.white,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -51,9 +46,6 @@ class SudansoApp extends StatelessWidget {
   }
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
 double parseNum(String text) {
   if (text.trim().isEmpty) return 0;
   return double.tryParse(text.replaceAll(',', '.').trim()) ?? 0;
@@ -64,9 +56,6 @@ String fmt(num value, [int digits = 2]) {
   return value.toDouble().toStringAsFixed(digits);
 }
 
-// ============================================================
-// MODELS
-// ============================================================
 class Appliance {
   String name;
   double watts;
@@ -160,9 +149,6 @@ class ProjectService {
   }
 }
 
-// ============================================================
-// HOME
-// ============================================================
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -211,9 +197,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ============================================================
-// DASHBOARD
-// ============================================================
 class DashboardTab extends StatelessWidget {
   const DashboardTab({super.key});
 
@@ -287,10 +270,6 @@ class _Dash {
   final Widget page;
   _Dash(this.title, this.subtitle, this.icon, this.page);
 }
-
-// ============================================================
-// APPLIANCES PAGE
-// ============================================================
 class AppliancesPage extends StatefulWidget {
   const AppliancesPage({super.key});
 
@@ -457,9 +436,6 @@ class _AppliancesPageState extends State<AppliancesPage> {
       );
 }
 
-// ============================================================
-// FULL SYSTEM PAGE
-// ============================================================
 class FullSystemPage extends StatefulWidget {
   const FullSystemPage({super.key});
 
@@ -644,154 +620,18 @@ class _FullSystemPageState extends State<FullSystemPage> {
         ),
       );
 }
-
-// ============================================================
-// PANELS PAGE
-// ============================================================
-class PanelsPage extends StatefulWidget {
-  const PanelsPage({super.key});
-
-  @override
-  State<PanelsPage> createState() => _PanelsPageState();
-}
-
-class _PanelsPageState extends State<PanelsPage> {
-  final e = TextEditingController(text: '10');
-  final s = TextEditingController(text: '5.5');
-  final l = TextEditingController(text: '15');
-  final p = TextEditingController(text: '550');
-  final voc = TextEditingController(text: '52.4');
-  final vmp = TextEditingController(text: '42.3');
-  final isc = TextEditingController(text: '14');
-  final imp = TextEditingController(text: '13');
-  final mn = TextEditingController(text: '120');
-  final mx = TextEditingController(text: '450');
-  final mvoc = TextEditingController(text: '500');
-  final mc = TextEditingController(text: '20');
-
-  final List<TextEditingController> _all = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _all.addAll([e, s, l, p, voc, vmp, isc, imp, mn, mx, mvoc, mc]);
-    for (final c in _all) {
-      c.addListener(_onChange);
-    }
-  }
-
-  void _onChange() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    for (final c in _all) {
-      c.removeListener(_onChange);
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final daily = parseNum(e.text);
-    final sun = parseNum(s.text);
-    final loss = parseNum(l.text) / 100;
-    final panelW = parseNum(p.text);
-    final vocV = parseNum(voc.text);
-    final vmpV = parseNum(vmp.text);
-    final iscV = parseNum(isc.text);
-    final impV = parseNum(imp.text);
-    final mpptMin = parseNum(mn.text);
-    final mpptMax = parseNum(mx.text);
-    final maxVoc = parseNum(mvoc.text);
-    final maxCur = parseNum(mc.text);
-
-    final perf = math.max(0.01, 1 - loss);
-    final pvKW = sun > 0 ? daily / (sun * perf) : 0.0;
-    final count = panelW > 0 ? (pvKW * 1000 / panelW).ceil() : 0;
-
-    int seriesMin = 0, seriesMax = 0;
-    if (vmpV > 0 && vocV > 0) {
-      seriesMin = (mpptMin / vmpV).ceil();
-      seriesMax = math.min(
-          (mpptMax / vmpV).floor(), (maxVoc / vocV).floor());
-    }
-    final series = seriesMax > 0 ? seriesMax : 1;
-    final parallel = count > 0 ? (count / series).ceil() : 0;
-
-    final totVoc = vocV * series;
-    final totVmp = vmpV * series;
-    final totIsc = iscV * parallel;
-    final totImp = impV * parallel;
-
-    final warnings = <String>[];
-    if (vmpV > 0 && (totVmp < mpptMin || totVmp > mpptMax)) {
-      warnings.add(
-          'Vmp الكلي (${fmt(totVmp)}V) خارج نافذة MPPT ($mpptMin–$mpptMax V)');
-    }
-    if (vocV > 0 && maxVoc > 0 && totVoc > maxVoc) {
-      warnings.add(
-          'Voc الكلي (${fmt(totVoc)}V) يتجاوز أقصى جهد PV (${fmt(maxVoc)}V)');
-    }
-    if (iscV > 0 && maxCur > 0 && totIsc > maxCur) {
-      warnings.add(
-          'Isc الكلي (${fmt(totIsc)}A) يتجاوز أقصى تيار (${fmt(maxCur)}A)');
-    }
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('حاسبة الألواح')),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _num(e, 'الاستهلاك اليومي', 'kWh'),
-            _num(s, 'ساعات الشمس', 'h'),
-            _num(l, 'خسائر النظام', '%'),
-            _num(p, 'قدرة اللوح', 'W'),
-            _num(voc, 'Voc', 'V'),
-            _num(vmp, 'Vmp', 'V'),
-            _num(isc, 'Isc', 'A'),
-            _num(imp, 'Imp', 'A'),
-            _num(mn, 'أقل جهد MPPT', 'V'),
-            _num(mx, 'أعلى جهد MPPT', 'V'),
-            _num(mvoc, 'أقصى Voc للإنفرتر', 'V'),
-            _num(mc, 'أقصى تيار PV', 'A'),
-            const SizedBox(height: 12),
-            _big('PV المطلوبة', '${fmt(pvKW)} kWp'),
-            _big('عدد الألواح', '$count لوح'),
-            _big('نطاق Series', '$seriesMin – $seriesMax'),
-            _big('المقترح', '$series × $parallel'),
-            _big('إجمالي Voc', '${fmt(totVoc)} V'),
-            _big('إجمالي Vmp', '${fmt(totVmp)} V'),
-            _big('إجمالي Isc', '${fmt(totIsc)} A'),
-            _big('إجمالي Imp', '${fmt(totImp)} A'),
-            if (warnings.isNotEmpty)
-              Card(
-                color: Colors.red.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('تحذيرات:',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red)),
-                      const SizedBox(height: 6),
-                      ...warnings.map((w) => Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 2),
-                            child: Text('• $w',
-                                style: TextStyle(
-                                    color: Colors.red.shade800)),
-                          )),
-                    ],
-                  ),
+12),
+            _big('الإنفرتر المقترح', '${fmt(recommended / 1000)} kW'),
+            _big('حمل الإقلاع', '${fmt(surgeW / 1000)} kW'),
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'تنبيه: معامل الإقلاع قيمة تقديرية. '
+                  'يجب مراجعة تيار البدء الحقيقي من الداتا شيت.',
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -809,221 +649,198 @@ class _PanelsPageState extends State<PanelsPage> {
       );
 
   Widget _big(String t, String v) => Card(
+        color: Colors.green.withOpacity(0.08),
         margin: const EdgeInsets.symmetric(vertical: 5),
-        child: ListTile(
-          title: Text(t),
-          trailing: Text(v,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold)),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Expanded(child: Text(t)),
+            Text(v,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800)),
+          ]),
         ),
       );
 }
 
-// ============================================================
-// BATTERY PAGE
-// ============================================================
-class BatteryPage extends StatefulWidget {
-  const BatteryPage({super.key});
+class ProjectsPage extends StatefulWidget {
+  const ProjectsPage({super.key});
 
   @override
-  State<BatteryPage> createState() => _BatteryPageState();
+  State<ProjectsPage> createState() => _ProjectsPageState();
 }
 
-class _BatteryPageState extends State<BatteryPage> {
-  final load = TextEditingController(text: '1000');
-  final hours = TextEditingController(text: '8');
-  final ah = TextEditingController(text: '100');
-  final dod = TextEditingController(text: '80');
-  final eff = TextEditingController(text: '95');
-  String voltage = '48';
-  String type = 'Lithium';
-
-  final List<TextEditingController> _all = [];
+class _ProjectsPageState extends State<ProjectsPage> {
+  List<Project> projects = [];
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _all.addAll([load, hours, ah, dod, eff]);
-    for (final c in _all) {
-      c.addListener(_onChange);
-    }
+    _load();
   }
 
-  void _onChange() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    for (final c in _all) {
-      c.removeListener(_onChange);
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  void _applyTypeDefaults(String t) {
+  Future<void> _load() async {
+    final list = await ProjectService.loadAll();
+    if (!mounted) return;
     setState(() {
-      type = t;
-      if (t == 'Lithium') {
-        dod.text = '80';
-        eff.text = '95';
-      } else if (t == 'AGM') {
-        dod.text = '50';
-        eff.text = '90';
-      } else {
-        dod.text = '50';
-        eff.text = '85';
-      }
+      projects = list;
+      loading = false;
     });
   }
 
+  Future<void> _addProject() async {
+    final nameC = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('مشروع جديد'),
+        content: TextField(
+          controller: nameC,
+          decoration:
+              const InputDecoration(labelText: 'اسم المشروع'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, nameC.text.trim()),
+            child: const Text('إنشاء'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+    final p = Project(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: result,
+      type: 'منزل',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      appliances: [],
+    );
+    setState(() => projects.add(p));
+    await ProjectService.saveAll(projects);
+  }
+
+  Future<void> _delete(Project p) async {
+    setState(() => projects.removeWhere((x) => x.id == p.id));
+    await ProjectService.saveAll(projects);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final w = parseNum(load.text);
-    final h = parseNum(hours.text);
-    final ahV = parseNum(ah.text);
-    final d = parseNum(dod.text) / 100;
-    final ef = parseNum(eff.text) / 100;
-    final v = double.tryParse(voltage) ?? 48;
-
-    final backupWh = w * h;
-    final requiredKWh =
-        (d > 0 && ef > 0) ? backupWh / (d * ef) / 1000 : 0.0;
-    final oneKWh = ahV * v / 1000;
-    final count = oneKWh > 0 ? (requiredKWh / oneKWh).ceil() : 0;
-    final totalAh = count * ahV;
-    final totalKWh = count * oneKWh;
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('حاسبة البطارية')),
+        appBar: AppBar(title: const Text('مشاريعي')),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _addProject,
+          icon: const Icon(Icons.add),
+          label: const Text('مشروع جديد'),
+        ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : projects.isEmpty
+                ? const Center(child: Text('لا توجد مشاريع بعد'))
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: projects
+                        .map((p) => Card(
+                              child: ListTile(
+                                leading: const CircleAvatar(
+                                  child: Icon(Icons.folder),
+                                ),
+                                title: Text(p.name),
+                                subtitle: Text(
+                                    'الأجهزة: ${p.appliances.length}'),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                      Icons.delete_outline),
+                                  onPressed: () => _delete(p),
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+      ),
+    );
+  }
+}
+
+class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('عن التطبيق')),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: DropdownButtonFormField<String>(
-                value: type,
-                decoration:
-                    const InputDecoration(labelText: 'نوع البطارية'),
-                items: const ['Lithium', 'AGM', 'FLD']
-                    .map((x) => DropdownMenuItem(
-                          value: x,
-                          child: Text(x),
-                        ))
-                    .toList(),
-                onChanged: (x) => _applyTypeDefaults(x ?? 'Lithium'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: const [
+                    Icon(Icons.wb_sunny,
+                        size: 70, color: Colors.orange),
+                    SizedBox(height: 8),
+                    Text('SUDANSO',
+                        style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text('حلول الطاقة الشمسية'),
+                    SizedBox(height: 12),
+                    Text(
+                      'منصة سودانية متخصصة في حساب وتصميم أنظمة '
+                      'الطاقة الشمسية واختيار المعدات المناسبة.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: DropdownButtonFormField<String>(
-                value: voltage,
-                decoration:
-                    const InputDecoration(labelText: 'جهد النظام'),
-                items: const ['12', '24', '48']
-                    .map((x) => DropdownMenuItem(
-                          value: x,
-                          child: Text('${x}V'),
-                        ))
-                    .toList(),
-                onChanged: (x) =>
-                    setState(() => voltage = x ?? '48'),
+            Card(
+              child: Column(
+                children: const [
+                  ListTile(
+                    leading: Icon(Icons.info),
+                    title: Text('الإصدار'),
+                    trailing: Text('1.0.0'),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.person),
+                    title: Text('المطور'),
+                    trailing: Text('فريق SUDANSO'),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.email),
+                    title: Text('التواصل'),
+                    trailing: Text('info@sudanso.app'),
+                  ),
+                ],
               ),
             ),
-            _num(load, 'الحمل', 'W'),
-            _num(hours, 'زمن التشغيل', 'h'),
-            _num(ah, 'سعة البطارية', 'Ah'),
-            _num(dod, 'DoD', '%'),
-            _num(eff, 'الكفاءة', '%'),
-            const SizedBox(height: 12),
-            _big('الطاقة المطلوبة', '${fmt(backupWh / 1000)} kWh'),
-            _big('السعة الاسمية', '${fmt(requiredKWh)} kWh'),
-            _big('البطارية الواحدة', '${fmt(oneKWh)} kWh'),
-            _big('عدد البطاريات', '$count'),
-            _big('إجمالي Ah', '${fmt(totalAh)} Ah'),
-            _big('إجمالي kWh', '${fmt(totalKWh)} kWh'),
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(14),
+                child: Text(
+                  'تنبيه: جميع الحسابات مبدئية ويجب مراجعة '
+                  'الداتا شيت الرسمية للمعدات قبل التنفيذ.',
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-
-  Widget _num(TextEditingController c, String l, String s) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: TextField(
-          controller: c,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: l, suffixText: s),
-        ),
-      );
-
-  Widget _big(String t, String v) => Card(
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        child: ListTile(
-          title: Text(t),
-          trailing: Text(v,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-      );
 }
-
-// ============================================================
-// INVERTER PAGE
-// ============================================================
-class InverterPage extends StatefulWidget {
-  const InverterPage({super.key});
-
-  @override
-  State<InverterPage> createState() => _InverterPageState();
-}
-
-class _InverterPageState extends State<InverterPage> {
-  final load = TextEditingController(text: '3000');
-  final margin = TextEditingController(text: '20');
-  final surge = TextEditingController(text: '3');
-
-  final List<TextEditingController> _all = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _all.addAll([load, margin, surge]);
-    for (final c in _all) {
-      c.addListener(_onChange);
-    }
-  }
-
-  void _onChange() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    for (final c in _all) {
-      c.removeListener(_onChange);
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final w = parseNum(load.text);
-    final m = parseNum(margin.text) / 100;
-    final s = parseNum(surge.text);
-    final recommended = w * (1 + m);
-    final surgeW = w * s;
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('حاسبة الإنفرتر')),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _num(load, 'الحمل المستمر', 'W
