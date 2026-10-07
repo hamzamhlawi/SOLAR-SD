@@ -1,11 +1,11 @@
-name: sudan_so
-description: Sudan SO - Solar Energy Calculator and Solar Market
-publish_to: "none"
+name: solar_sd
+description: Sudan SO - Solar Energy Calculator
+publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -13,6 +13,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   url_launcher: ^6.3.3
+  geolocator: ^14.1.1
 
 dev_dependencies:
   flutter_test:
@@ -22,10 +23,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-dependencies:
-  flutter:
-    sdk: flutter
-
-  cupertino_icons: ^1.0.8
-  url_launcher: ^6.3.3
-  geolocator: ^14.1.1
