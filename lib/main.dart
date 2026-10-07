@@ -6,68 +6,49 @@ void main() {
   runApp(const SudanSOApp());
 }
 
-// ============================================================================
+// ============================================================
 // SUDAN SO
-// Professional Solar System Engineering Calculator + Solar Market
-// ============================================================================
+// Solar Energy Calculator + Solar Market
+// Engineering Edition
+// ============================================================
 
 class SudanSOApp extends StatelessWidget {
   const SudanSOApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFF087F5B);
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sudan SO',
-      themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.light,
-        ),
+        colorSchemeSeed: const Color(0xFF087F5B),
+        brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFF6F8F7),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
         ),
         inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(14),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-            borderSide: BorderSide(color: Color(0xFFE1E7E4)),
+            borderRadius: BorderRadius.circular(14),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-            borderSide: BorderSide(color: seed, width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: Color(0xFF087F5B),
+              width: 2,
+            ),
           ),
         ),
-        cardTheme: const CardThemeData(
-          elevation: 0,
+        cardTheme: CardThemeData(
+          elevation: 1,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(20)),
-          ),
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.dark,
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(20)),
+            borderRadius: BorderRadius.all(Radius.circular(18)),
           ),
         ),
       ),
@@ -82,9 +63,9 @@ class SudanSOApp extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// DATA MODELS
-// ============================================================================
+// ============================================================
+// MODELS
+// ============================================================
 
 class SolarPanel {
   final String brand;
@@ -105,7 +86,7 @@ class SolarPanel {
     required this.imp,
   });
 
-  String get name => '$brand $model';
+  String get title => '$brand $model - ${watt.toStringAsFixed(0)}W';
 }
 
 class Inverter {
@@ -113,21 +94,16 @@ class Inverter {
   final String model;
   final String category;
   final String type;
-
   final double powerKw;
   final double batteryVoltage;
-
   final double maxPvPowerKw;
   final double maxPvVoc;
-
   final double mpptMin;
   final double mpptMax;
   final int mpptCount;
-
   final double maxPvCurrent;
   final double maxChargeCurrent;
   final double maxDischargeCurrent;
-
   final double efficiency;
   final String ipRating;
   final String officialUrl;
@@ -152,7 +128,7 @@ class Inverter {
     required this.officialUrl,
   });
 
-  String get name => '$brand $model';
+  String get title => '$brand $model';
 }
 
 class LoadItem {
@@ -168,23 +144,22 @@ class LoadItem {
     required this.hours,
   });
 
-  double get dailyWh => power * quantity * hours;
+  double get dailyWh {
+    return (power * quantity * hours).toDouble();
+  }
 
-  double get peakW => power * quantity;
+  double get peakW {
+    return (power * quantity).toDouble();
+  }
 }
 
 class PvConfiguration {
   final int series;
   final int parallel;
   final int totalPanels;
-
   final double arrayPowerKw;
-  final double vmp;
-  final double voc;
   final double coldVoc;
   final double hotVmp;
-
-  final double arrayIsc;
   final double currentPerMppt;
 
   const PvConfiguration({
@@ -192,38 +167,41 @@ class PvConfiguration {
     required this.parallel,
     required this.totalPanels,
     required this.arrayPowerKw,
-    required this.vmp,
-    required this.voc,
     required this.coldVoc,
     required this.hotVmp,
-    required this.arrayIsc,
     required this.currentPerMppt,
   });
+
+  String get text => '$seriesS × $parallelP';
+
+  String get seriesS => '$series';
+  String get parallelP => '$parallel';
 }
 
 class CalculationResult {
   final double dailyWh;
   final double peakW;
-
   final double pvRequiredKw;
   final int requiredPanels;
-
   final double batteryKwh;
   final double batteryAh;
-
   final double batteryLoadCurrent;
   final double estimatedChargeCurrent;
 
-  final PvConfiguration pv;
+  final double actualPvKw;
+  final int actualPanels;
+  final double coldVoc;
+  final double hotVmp;
+  final double currentPerMppt;
 
-  final bool pvPowerOk;
-  final bool coldVocOk;
-  final bool mpptLowOk;
-  final bool mpptHighOk;
-  final bool mpptCurrentOk;
-  final bool panelCountOk;
-  final bool inverterPowerOk;
+  final bool peakOk;
   final bool batteryVoltageOk;
+  final bool pvPowerOk;
+  final bool vocOk;
+  final bool vmpOk;
+  final bool currentOk;
+
+  final PvConfiguration? configuration;
 
   const CalculationResult({
     required this.dailyWh,
@@ -234,270 +212,290 @@ class CalculationResult {
     required this.batteryAh,
     required this.batteryLoadCurrent,
     required this.estimatedChargeCurrent,
-    required this.pv,
-    required this.pvPowerOk,
-    required this.coldVocOk,
-    required this.mpptLowOk,
-    required this.mpptHighOk,
-    required this.mpptCurrentOk,
-    required this.panelCountOk,
-    required this.inverterPowerOk,
+    required this.actualPvKw,
+    required this.actualPanels,
+    required this.coldVoc,
+    required this.hotVmp,
+    required this.currentPerMppt,
+    required this.peakOk,
     required this.batteryVoltageOk,
+    required this.pvPowerOk,
+    required this.vocOk,
+    required this.vmpOk,
+    required this.currentOk,
+    required this.configuration,
   });
-
-  bool get allOk =>
-      pvPowerOk &&
-      coldVocOk &&
-      mpptLowOk &&
-      mpptHighOk &&
-      mpptCurrentOk &&
-      panelCountOk &&
-      inverterPowerOk &&
-      batteryVoltageOk;
 }
 
-// ============================================================================
+// ============================================================
 // DATABASE
-// IMPORTANT: These are design-reference values.
-// Always verify the exact device datasheet before installation.
-// ============================================================================
+// ============================================================
 
-const List<SolarPanel> solarPanels = [
-  SolarPanel(
-    brand: 'Generic',
-    model: '550W',
-    watt: 550,
-    voc: 52.4,
-    vmp: 42.3,
-    isc: 14.0,
-    imp: 13.0,
-  ),
-  SolarPanel(
-    brand: 'Generic',
-    model: '590W',
-    watt: 590,
-    voc: 49.8,
-    vmp: 41.7,
-    isc: 14.8,
-    imp: 14.1,
-  ),
-];
+class SolarDatabase {
+  static const List<SolarPanel> panels = [
+    SolarPanel(
+      brand: 'Generic',
+      model: '550W',
+      watt: 550.0,
+      voc: 52.4,
+      vmp: 42.3,
+      isc: 14.0,
+      imp: 13.0,
+    ),
+    SolarPanel(
+      brand: 'Generic',
+      model: '590W',
+      watt: 590.0,
+      voc: 49.8,
+      vmp: 41.7,
+      isc: 14.8,
+      imp: 14.1,
+    ),
+    SolarPanel(
+      brand: 'LONGi',
+      model: 'Hi-MO 6 550W',
+      watt: 550.0,
+      voc: 49.8,
+      vmp: 41.7,
+      isc: 13.9,
+      imp: 13.2,
+    ),
+    SolarPanel(
+      brand: 'Jinko',
+      model: 'Tiger 550W',
+      watt: 550.0,
+      voc: 49.62,
+      vmp: 41.62,
+      isc: 13.89,
+      imp: 13.21,
+    ),
+    SolarPanel(
+      brand: 'Trina',
+      model: 'Vertex 550W',
+      watt: 550.0,
+      voc: 49.8,
+      vmp: 41.7,
+      isc: 13.89,
+      imp: 13.19,
+    ),
+  ];
 
-const List<Inverter> inverters = [
-  Inverter(
-    brand: 'Huawei',
-    model: 'SUN2000-5KTL-L1',
-    category: 'ممتازة',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 7.5,
-    maxPvVoc: 600,
-    mpptMin: 90,
-    mpptMax: 560,
-    mpptCount: 2,
-    maxPvCurrent: 12.5,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.984,
-    ipRating: 'IP65',
-    officialUrl: 'https://solar.huawei.com/',
-  ),
-  Inverter(
-    brand: 'Deye',
-    model: 'SUN-5K-SG04LP1',
-    category: 'ممتازة',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6.5,
-    maxPvVoc: 500,
-    mpptMin: 150,
-    mpptMax: 425,
-    mpptCount: 2,
-    maxPvCurrent: 13,
-    maxChargeCurrent: 120,
-    maxDischargeCurrent: 120,
-    efficiency: 0.976,
-    ipRating: 'IP65',
-    officialUrl: 'https://www.deyeess.com/',
-  ),
-  Inverter(
-    brand: 'Growatt',
-    model: 'SPF 5000 ES',
-    category: 'متوسطة',
-    type: 'Off-Grid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 450,
-    mpptMin: 120,
-    mpptMax: 430,
-    mpptCount: 1,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.93,
-    ipRating: 'IP20',
-    officialUrl: 'https://www.growatt.com/',
-  ),
-  Inverter(
-    brand: 'Solis',
-    model: 'S5-EH1P5K-L',
-    category: 'ممتازة',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 8,
-    maxPvVoc: 600,
-    mpptMin: 90,
-    mpptMax: 520,
-    mpptCount: 2,
-    maxPvCurrent: 16,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.977,
-    ipRating: 'IP65',
-    officialUrl: 'https://www.solisinverters.com/',
-  ),
-  Inverter(
-    brand: 'MUST',
-    model: 'PV18-5048',
-    category: 'اقتصادية',
-    type: 'Off-Grid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 1,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.93,
-    ipRating: 'IP21',
-    officialUrl: 'https://www.mustpower.com/',
-  ),
-  Inverter(
-    brand: 'Motoma',
-    model: 'Hybrid 5kW',
-    category: 'متوسطة',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 2,
-    maxPvCurrent: 15,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.95,
-    ipRating: 'IP65',
-    officialUrl: 'https://www.motoma.com/',
-  ),
-  Inverter(
-    brand: 'FelicitySolar',
-    model: 'IVGM5KLP2G1',
-    category: 'متوسطة',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6.5,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 2,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.95,
-    ipRating: 'IP65',
-    officialUrl: 'https://www.felicitysolar.com/',
-  ),
-  Inverter(
-    brand: 'GSB',
-    model: '5kW 48V',
-    category: 'اقتصادية',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 1,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.94,
-    ipRating: 'IP21',
-    officialUrl: '',
-  ),
-  Inverter(
-    brand: 'Vackson',
-    model: '5kW 48V',
-    category: 'اقتصادية',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 1,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.93,
-    ipRating: 'IP21',
-    officialUrl: '',
-  ),
-  Inverter(
-    brand: 'Megasun',
-    model: '5kW 48V',
-    category: 'اقتصادية',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 1,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.93,
-    ipRating: 'IP21',
-    officialUrl: '',
-  ),
-  Inverter(
-    brand: 'Restar',
-    model: '5kW 48V',
-    category: 'اقتصادية',
-    type: 'Hybrid',
-    powerKw: 5,
-    batteryVoltage: 48,
-    maxPvPowerKw: 6,
-    maxPvVoc: 500,
-    mpptMin: 120,
-    mpptMax: 450,
-    mpptCount: 1,
-    maxPvCurrent: 18,
-    maxChargeCurrent: 100,
-    maxDischargeCurrent: 100,
-    efficiency: 0.93,
-    ipRating: 'IP21',
-    officialUrl: '',
-  ),
-];
+  static const List<Inverter> inverters = [
+    Inverter(
+      brand: 'Huawei',
+      model: 'SUN2000-5KTL-L1',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 7.5,
+      maxPvVoc: 600.0,
+      mpptMin: 90.0,
+      mpptMax: 560.0,
+      mpptCount: 2,
+      maxPvCurrent: 12.5,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 98.4,
+      ipRating: 'IP65',
+      officialUrl: 'https://solar.huawei.com/',
+    ),
+    Inverter(
+      brand: 'Deye',
+      model: 'SUN-5K-SG04LP1',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.5,
+      maxPvVoc: 500.0,
+      mpptMin: 150.0,
+      mpptMax: 425.0,
+      mpptCount: 2,
+      maxPvCurrent: 13.0,
+      maxChargeCurrent: 120.0,
+      maxDischargeCurrent: 120.0,
+      efficiency: 97.6,
+      ipRating: 'IP65',
+      officialUrl: 'https://www.deyeess.com/',
+    ),
+    Inverter(
+      brand: 'Growatt',
+      model: 'SPF 5000 ES',
+      category: 'Off Grid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 450.0,
+      mpptMin: 120.0,
+      mpptMax: 430.0,
+      mpptCount: 1,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 93.0,
+      ipRating: 'IP20',
+      officialUrl: 'https://www.growatt.com/',
+    ),
+    Inverter(
+      brand: 'Solis',
+      model: 'S5-EH1P5K-L',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 8.0,
+      maxPvVoc: 600.0,
+      mpptMin: 90.0,
+      mpptMax: 520.0,
+      mpptCount: 2,
+      maxPvCurrent: 16.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 97.7,
+      ipRating: 'IP65',
+      officialUrl: 'https://www.solisinverters.com/',
+    ),
+    Inverter(
+      brand: 'MUST',
+      model: 'PV18-5048',
+      category: 'Off Grid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 1,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 93.0,
+      ipRating: 'IP21',
+      officialUrl: 'https://www.mustpower.com/',
+    ),
+    Inverter(
+      brand: 'Motoma',
+      model: 'Hybrid 5kW',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 2,
+      maxPvCurrent: 15.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 95.0,
+      ipRating: 'IP65',
+      officialUrl: 'https://www.motoma.com/',
+    ),
+    Inverter(
+      brand: 'FelicitySolar',
+      model: 'IVGM5KLP2G1',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.5,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 2,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 95.0,
+      ipRating: 'IP65',
+      officialUrl: 'https://www.felicitysolar.com/',
+    ),
+    Inverter(
+      brand: 'GSB',
+      model: '5kW 48V',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 1,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 94.0,
+      ipRating: 'IP21',
+      officialUrl: '',
+    ),
+    Inverter(
+      brand: 'Vackson',
+      model: '5kW 48V',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 1,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 93.0,
+      ipRating: 'IP21',
+      officialUrl: '',
+    ),
+    Inverter(
+      brand: 'Megasun',
+      model: '5kW 48V',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 1,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 93.0,
+      ipRating: 'IP21',
+      officialUrl: '',
+    ),
+    Inverter(
+      brand: 'Restar',
+      model: '5kW 48V',
+      category: 'Hybrid',
+      type: 'Single Phase',
+      powerKw: 5.0,
+      batteryVoltage: 48.0,
+      maxPvPowerKw: 6.0,
+      maxPvVoc: 500.0,
+      mpptMin: 120.0,
+      mpptMax: 450.0,
+      mpptCount: 1,
+      maxPvCurrent: 18.0,
+      maxChargeCurrent: 100.0,
+      maxDischargeCurrent: 100.0,
+      efficiency: 93.0,
+      ipRating: 'IP21',
+      officialUrl: '',
+    ),
+  ];
+}
 
-// ============================================================================
+// ============================================================
 // ENGINEERING CALCULATOR
-// ============================================================================
+// ============================================================
 
 class SolarEngineering {
   static CalculationResult calculate({
@@ -508,91 +506,101 @@ class SolarEngineering {
     required double systemEfficiency,
     required double batteryEfficiency,
     required double dod,
-    required double batteryVoltage,
     required double safetyMargin,
     required int series,
     required int parallel,
-    required double coldVocFactor,
-    required double hotVmpFactor,
   }) {
-    final dailyWh = loads.fold<double>(
-      0,
-      (sum, load) => sum + load.dailyWh,
+    double dailyWh = 0.0;
+    double peakW = 0.0;
+
+    for (final load in loads) {
+      dailyWh += load.dailyWh;
+      peakW += load.peakW;
+    }
+
+    final double usablePsh = math.max(1.0, psh).toDouble();
+    final double usableSystemEfficiency =
+        math.max(0.50, math.min(systemEfficiency, 1.0)).toDouble();
+
+    final double usableBatteryEfficiency =
+        math.max(0.70, math.min(batteryEfficiency, 1.0)).toDouble();
+
+    final double usableDod =
+        math.max(0.50, math.min(dod, 0.95)).toDouble();
+
+    final double usableSafety =
+        math.max(1.0, safetyMargin).toDouble();
+
+    final double pvRequiredKw =
+        (dailyWh / (usablePsh * usableSystemEfficiency) / 1000.0)
+            .toDouble();
+
+    final int requiredPanels = math.max(
+      1,
+      (pvRequiredKw * 1000.0 / panel.watt).ceil(),
     );
 
-    final peakW = loads.fold<double>(
-      0,
-      (sum, load) => sum + load.peakW,
+    final double batteryKwh =
+        (dailyWh / 1000.0 / usableDod / usableBatteryEfficiency)
+            .toDouble();
+
+    final double batteryAh =
+        (batteryKwh * 1000.0 / inverter.batteryVoltage).toDouble();
+
+    final double batteryLoadCurrent =
+        (peakW / inverter.batteryVoltage).toDouble();
+
+    final double estimatedChargeCurrent =
+        (pvRequiredKw * 1000.0 / inverter.batteryVoltage).toDouble();
+
+    final int totalPanels = series * parallel;
+
+    final double actualPvKw =
+        (totalPanels * panel.watt / 1000.0).toDouble();
+
+    // Conservative design checks.
+    final double coldVoc =
+        (series * panel.voc * 1.10).toDouble();
+
+    final double hotVmp =
+        (series * panel.vmp * 0.85).toDouble();
+
+    final int stringsPerMppt = math.max(
+      1,
+      (parallel + inverter.mpptCount - 1) ~/ inverter.mpptCount,
     );
 
-    final pvRequiredKw = dailyWh <= 0
-        ? 0
-        : dailyWh / (psh * 1000 * systemEfficiency);
+    final double currentPerMppt =
+        (panel.isc * stringsPerMppt).toDouble();
 
-    final requiredPanels = pvRequiredKw <= 0
-        ? 0
-        : (pvRequiredKw * 1000 / panel.watt).ceil();
+    final bool peakOk =
+        (peakW * usableSafety) <= (inverter.powerKw * 1000.0);
 
-    final batteryKwh = dailyWh <= 0
-        ? 0
-        : (dailyWh / 1000) /
-            (dod * batteryEfficiency) *
-            1.0;
+    final bool batteryVoltageOk =
+        inverter.batteryVoltage > 0;
 
-    final batteryAh = batteryKwh <= 0
-        ? 0
-        : batteryKwh * 1000 / batteryVoltage;
+    final bool pvPowerOk =
+        actualPvKw <= inverter.maxPvPowerKw;
 
-    final batteryLoadCurrent = peakW <= 0
-        ? 0
-        : peakW / batteryVoltage / inverter.efficiency;
+    final bool vocOk =
+        coldVoc <= inverter.maxPvVoc;
 
-    final pvArrayKw = panel.watt * series * parallel / 1000;
+    final bool vmpOk =
+        hotVmp >= inverter.mpptMin &&
+        hotVmp <= inverter.mpptMax;
 
-    final vmp = panel.vmp * series;
-    final voc = panel.voc * series;
+    final bool currentOk =
+        currentPerMppt <= inverter.maxPvCurrent;
 
-    // Conservative engineering margins:
-    // cold Voc may rise above STC Voc.
-    // hot Vmp may fall below STC Vmp.
-    final coldVoc = voc * coldVocFactor;
-    final hotVmp = vmp * hotVmpFactor;
-
-    final arrayIsc = panel.isc * parallel;
-
-    final stringsPerMppt =
-        math.max(1, (parallel + inverter.mpptCount - 1) ~/ inverter.mpptCount);
-
-    final currentPerMppt = panel.isc * stringsPerMppt;
-
-    final estimatedChargeCurrent = pvArrayKw <= 0
-        ? 0
-        : pvArrayKw * 1000 / batteryVoltage * inverter.efficiency;
-
-    final pvPowerOk =
-        requiredPanels == 0 || pvArrayKw <= inverter.maxPvPowerKw;
-
-    final coldVocOk =
-        requiredPanels == 0 || coldVoc <= inverter.maxPvVoc;
-
-    final mpptLowOk =
-        requiredPanels == 0 || hotVmp >= inverter.mpptMin;
-
-    final mpptHighOk =
-        requiredPanels == 0 || vmp <= inverter.mpptMax;
-
-    final mpptCurrentOk =
-        requiredPanels == 0 || currentPerMppt <= inverter.maxPvCurrent;
-
-    final panelCountOk =
-        requiredPanels == 0 || series * parallel >= requiredPanels;
-
-    final inverterPowerOk =
-        peakW <= 0 ||
-        peakW * safetyMargin <= inverter.powerKw * 1000;
-
-    final batteryVoltageOk =
-        (batteryVoltage - inverter.batteryVoltage).abs() < 0.1;
+    final PvConfiguration config = PvConfiguration(
+      series: series,
+      parallel: parallel,
+      totalPanels: totalPanels,
+      arrayPowerKw: actualPvKw,
+      coldVoc: coldVoc,
+      hotVmp: hotVmp,
+      currentPerMppt: currentPerMppt,
+    );
 
     return CalculationResult(
       dailyWh: dailyWh,
@@ -603,99 +611,93 @@ class SolarEngineering {
       batteryAh: batteryAh,
       batteryLoadCurrent: batteryLoadCurrent,
       estimatedChargeCurrent: estimatedChargeCurrent,
-      pv: PvConfiguration(
-        series: series,
-        parallel: parallel,
-        totalPanels: series * parallel,
-        arrayPowerKw: pvArrayKw,
-        vmp: vmp,
-        voc: voc,
-        coldVoc: coldVoc,
-        hotVmp: hotVmp,
-        arrayIsc: arrayIsc,
-        currentPerMppt: currentPerMppt,
-      ),
-      pvPowerOk: pvPowerOk,
-      coldVocOk: coldVocOk,
-      mpptLowOk: mpptLowOk,
-      mpptHighOk: mpptHighOk,
-      mpptCurrentOk: mpptCurrentOk,
-      panelCountOk: panelCountOk,
-      inverterPowerOk: inverterPowerOk,
+      actualPvKw: actualPvKw,
+      actualPanels: totalPanels,
+      coldVoc: coldVoc,
+      hotVmp: hotVmp,
+      currentPerMppt: currentPerMppt,
+      peakOk: peakOk,
       batteryVoltageOk: batteryVoltageOk,
+      pvPowerOk: pvPowerOk,
+      vocOk: vocOk,
+      vmpOk: vmpOk,
+      currentOk: currentOk,
+      configuration: config,
     );
   }
 
-  static PvConfiguration? suggestPvConfiguration({
+  static PvConfiguration? suggestConfiguration({
     required SolarPanel panel,
     required Inverter inverter,
-    required int requiredPanels,
-    required double coldVocFactor,
-    required double hotVmpFactor,
+    required int minimumPanels,
   }) {
-    if (requiredPanels <= 0) return null;
-
     PvConfiguration? best;
 
     for (int series = 1; series <= 24; series++) {
-      final vmp = panel.vmp * series;
-      final voc = panel.voc * series;
-
-      final coldVoc = voc * coldVocFactor;
-      final hotVmp = vmp * hotVmpFactor;
-
-      if (coldVoc > inverter.maxPvVoc) continue;
-      if (hotVmp < inverter.mpptMin) continue;
-      if (vmp > inverter.mpptMax) continue;
-
       for (int parallel = 1; parallel <= 12; parallel++) {
-        final totalPanels = series * parallel;
+        final int totalPanels = series * parallel;
 
-        if (totalPanels < requiredPanels) continue;
+        if (totalPanels < minimumPanels) {
+          continue;
+        }
 
-        final powerKw =
-            panel.watt * totalPanels / 1000;
+        final double pvKw =
+            (totalPanels * panel.watt / 1000.0).toDouble();
 
-        if (powerKw > inverter.maxPvPowerKw) continue;
+        final double coldVoc =
+            (series * panel.voc * 1.10).toDouble();
 
-        final stringsPerMppt =
-            math.max(
-              1,
-              (parallel + inverter.mpptCount - 1) ~/
-                  inverter.mpptCount,
-            );
+        final double hotVmp =
+            (series * panel.vmp * 0.85).toDouble();
 
-        final currentPerMppt =
-            panel.isc * stringsPerMppt;
+        final int stringsPerMppt = math.max(
+          1,
+          (parallel + inverter.mpptCount - 1) ~/ inverter.mpptCount,
+        );
 
-        if (currentPerMppt > inverter.maxPvCurrent) continue;
+        final double currentPerMppt =
+            (panel.isc * stringsPerMppt).toDouble();
 
-        final candidate = PvConfiguration(
+        if (pvKw > inverter.maxPvPowerKw) {
+          continue;
+        }
+
+        if (coldVoc > inverter.maxPvVoc) {
+          continue;
+        }
+
+        if (hotVmp < inverter.mpptMin ||
+            hotVmp > inverter.mpptMax) {
+          continue;
+        }
+
+        if (currentPerMppt > inverter.maxPvCurrent) {
+          continue;
+        }
+
+        final PvConfiguration candidate = PvConfiguration(
           series: series,
           parallel: parallel,
           totalPanels: totalPanels,
-          arrayPowerKw: powerKw,
-          vmp: vmp,
-          voc: voc,
+          arrayPowerKw: pvKw,
           coldVoc: coldVoc,
           hotVmp: hotVmp,
-          arrayIsc: panel.isc * parallel,
           currentPerMppt: currentPerMppt,
         );
 
         if (best == null) {
           best = candidate;
         } else {
-          final bestExcess =
-              best.totalPanels - requiredPanels;
+          final int panelDifference =
+              candidate.totalPanels - minimumPanels;
 
-          final candidateExcess =
-              candidate.totalPanels - requiredPanels;
+          final int bestDifference =
+              best.totalPanels - minimumPanels;
 
-          if (candidateExcess < bestExcess) {
+          if (panelDifference < bestDifference) {
             best = candidate;
-          } else if (candidateExcess == bestExcess &&
-              candidate.totalPanels < best.totalPanels) {
+          } else if (panelDifference == bestDifference &&
+              candidate.arrayPowerKw < best.arrayPowerKw) {
             best = candidate;
           }
         }
@@ -706,9 +708,9 @@ class SolarEngineering {
   }
 }
 
-// ============================================================================
+// ============================================================
 // MAIN SHELL
-// ============================================================================
+// ============================================================
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -720,16 +722,12 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int index = 0;
 
-  late final List<Widget> pages = [
-    HomePage(
-      onCalculator: () => setState(() => index = 1),
-      onMarket: () => setState(() => index = 2),
-      onLocation: () => setState(() => index = 3),
-    ),
-    const CalculatorPage(),
-    const MarketPage(),
-    const LocationPage(),
-    const MorePage(),
+  final List<Widget> pages = const [
+    HomePage(),
+    CalculatorPage(),
+    MarketPage(),
+    LocationPage(),
+    MorePage(),
   ];
 
   @override
@@ -742,7 +740,9 @@ class _MainShellState extends State<MainShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (value) {
-          setState(() => index = value);
+          setState(() {
+            index = value;
+          });
         },
         destinations: const [
           NavigationDestination(
@@ -766,8 +766,8 @@ class _MainShellState extends State<MainShell> {
             label: 'الموقع',
           ),
           NavigationDestination(
-            icon: Icon(Icons.more_horiz),
-            selectedIcon: Icon(Icons.more),
+            icon: Icon(Icons.menu),
+            selectedIcon: Icon(Icons.menu),
             label: 'المزيد',
           ),
         ],
@@ -776,164 +776,143 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-// ============================================================================
+// ============================================================
 // HOME
-// ============================================================================
+// ============================================================
 
 class HomePage extends StatelessWidget {
-  final VoidCallback onCalculator;
-  final VoidCallback onMarket;
-  final VoidCallback onLocation;
-
-  const HomePage({
-    super.key,
-    required this.onCalculator,
-    required this.onMarket,
-    required this.onLocation,
-  });
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Sudan SO',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primaryContainer,
+                  Color(0xFF087F5B),
+                  Color(0xFF0B6E4F),
                 ],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
               ),
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(24),
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
                   Icons.solar_power,
-                  size: 42,
-                  color: theme.colorScheme.onPrimary,
+                  color: Colors.white,
+                  size: 52,
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 16),
                 Text(
-                  'صمّم نظامك الشمسي بثقة',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.w900,
+                  'Sudan SO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
-                  'حساب الطاقة، الألواح، البطاريات والعاكسات مع فحوصات هندسية للتوافق.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onPrimary.withValues(alpha: .9),
-                    height: 1.5,
+                  'منصة متخصصة في حساب وتصميم أنظمة الطاقة الشمسية.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
                   ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: onCalculator,
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('ابدأ التصميم'),
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 20),
-
-          Row(
+          const SectionTitle(
+            title: 'أدوات التطبيق',
+            icon: Icons.build_circle_outlined,
+          ),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.1,
             children: [
-              Expanded(
-                child: MetricCard(
-                  icon: Icons.solar_power,
-                  title: 'ألواح',
-                  value: '${solarPanels.length}',
-                ),
+              ToolCard(
+                icon: Icons.calculate,
+                title: 'الحاسبة الشمسية',
+                subtitle: 'تصميم النظام',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const CalculatorPage(),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: MetricCard(
-                  icon: Icons.battery_charging_full,
-                  title: 'عاكسات',
-                  value: '${inverters.length}',
-                ),
+              ToolCard(
+                icon: Icons.solar_power,
+                title: 'الألواح',
+                subtitle: 'اختيار ومواصفات',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MarketPage(),
+                    ),
+                  );
+                },
+              ),
+              ToolCard(
+                icon: Icons.electrical_services,
+                title: 'الإنفرترات',
+                subtitle: 'قاعدة بيانات',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MarketPage(),
+                    ),
+                  );
+                },
+              ),
+              ToolCard(
+                icon: Icons.location_on,
+                title: 'الموقع',
+                subtitle: 'الميل والاتجاه',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const LocationPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          const SectionTitle(
-            title: 'الأدوات الرئيسية',
-            subtitle: 'كل ما تحتاجه للتصميم المبدئي',
-          ),
-
-          const SizedBox(height: 10),
-
-          ToolCard(
-            icon: Icons.calculate,
-            title: 'حاسبة النظام الشمسي',
-            subtitle: 'الأحمال • PV • البطاريات • MPPT',
-            onTap: onCalculator,
-          ),
-
-          const SizedBox(height: 10),
-
-          ToolCard(
-            icon: Icons.storefront,
-            title: 'سوق الطاقة الشمسية',
-            subtitle: 'الألواح والعاكسات والمواصفات',
-            onTap: onMarket,
-          ),
-
-          const SizedBox(height: 10),
-
-          ToolCard(
-            icon: Icons.location_on,
-            title: 'حساب الميل والاتجاه',
-            subtitle: 'تقدير الميل حسب خط العرض',
-            onTap: onLocation,
-          ),
-
-          const SizedBox(height: 20),
-
-          AppCard(
+          const AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                SectionTitle(
-                  title: 'منهجية الحساب',
-                  subtitle: 'مصممة لتقليل أخطاء التصميم',
+              children: [
+                Text(
+                  'ملاحظة هندسية',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
-                SizedBox(height: 12),
-                InfoBullet(
-                  text: 'فحص جهد Voc مع هامش للبرد.',
-                ),
-                InfoBullet(
-                  text: 'فحص Vmp عند انخفاض الجهد بسبب الحرارة.',
-                ),
-                InfoBullet(
-                  text: 'فحص تيار الـMPPT لكل مدخل بشكل تقريبي.',
-                ),
-                InfoBullet(
-                  text: 'فحص قدرة العاكس مع معامل أمان للحمل.',
-                ),
-                InfoBullet(
-                  text: 'إظهار التحذيرات بدلاً من إعطاء نتيجة مضللة.',
+                SizedBox(height: 8),
+                Text(
+                  'نتائج الحاسبة هي نتائج تصميمية أولية. قبل التنفيذ يجب مراجعة Datasheet الفعلي لكل جهاز، درجات الحرارة، الكابلات، الحمايات، هبوط الجهد، تيار الإقلاع للأحمال الحركية ونظام البطاريات.',
                 ),
               ],
             ),
@@ -944,78 +923,68 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// ============================================================================
+// ============================================================
 // CALCULATOR
-// ============================================================================
+// ============================================================
 
 class CalculatorPage extends StatefulWidget {
-  final Inverter? initialInverter;
-  final SolarPanel? initialPanel;
-
-  const CalculatorPage({
-    super.key,
-    this.initialInverter,
-    this.initialPanel,
-  });
+  const CalculatorPage({super.key});
 
   @override
   State<CalculatorPage> createState() => _CalculatorPageState();
 }
 
 class _CalculatorPageState extends State<CalculatorPage> {
-  late SolarPanel selectedPanel;
-  late Inverter selectedInverter;
+  final List<LoadItem> loads = [
+    LoadItem(
+      name: 'ثلاجة',
+      power: 200,
+      quantity: 1,
+      hours: 12,
+    ),
+    LoadItem(
+      name: 'مروحة',
+      power: 70,
+      quantity: 2,
+      hours: 10,
+    ),
+    LoadItem(
+      name: 'إضاءة',
+      power: 20,
+      quantity: 6,
+      hours: 6,
+    ),
+  ];
 
-  final List<LoadItem> loads = [];
+  SolarPanel selectedPanel = SolarDatabase.panels.first;
+  Inverter selectedInverter = SolarDatabase.inverters[1];
 
-  late final TextEditingController pshController;
-  late final TextEditingController efficiencyController;
-  late final TextEditingController batteryEfficiencyController;
-  late final TextEditingController dodController;
-  late final TextEditingController batteryVoltageController;
-  late final TextEditingController safetyController;
-  late final TextEditingController seriesController;
-  late final TextEditingController parallelController;
+  double psh = 5.5;
+  double systemEfficiency = 0.80;
+  double batteryEfficiency = 0.95;
+  double dod = 0.80;
+  double safetyMargin = 1.25;
 
-  static const double coldVocFactor = 1.10;
-  static const double hotVmpFactor = 0.85;
+  int series = 4;
+  int parallel = 2;
 
-  @override
-  void initState() {
-    super.initState();
+  CalculationResult? result;
+  PvConfiguration? suggested;
 
-    selectedPanel =
-        widget.initialPanel ?? solarPanels.first;
+  final TextEditingController pshController =
+      TextEditingController(text: '5.5');
 
-    selectedInverter =
-        widget.initialInverter ?? inverters.first;
+  final TextEditingController efficiencyController =
+      TextEditingController(text: '80');
 
-    pshController =
-        TextEditingController(text: '5.5');
+  final TextEditingController batteryEfficiencyController =
+      TextEditingController(text: '95');
 
-    efficiencyController =
-        TextEditingController(text: '80');
+  final TextEditingController dodController =
+      TextEditingController(text: '80');
 
-    batteryEfficiencyController =
-        TextEditingController(text: '95');
-
-    dodController =
-        TextEditingController(text: '80');
-
-    batteryVoltageController =
-        TextEditingController(
-          text: selectedInverter.batteryVoltage.toStringAsFixed(0),
-        );
-
-    safetyController =
-        TextEditingController(text: '1.25');
-
-    seriesController =
-        TextEditingController(text: '5');
-
-    parallelController =
-        TextEditingController(text: '2');
-  }
+  final TextEditingController safetyController =
+      TextEditingController(text: '1.25');
 
   @override
   void dispose() {
@@ -1023,1001 +992,631 @@ class _CalculatorPageState extends State<CalculatorPage> {
     efficiencyController.dispose();
     batteryEfficiencyController.dispose();
     dodController.dispose();
-    batteryVoltageController.dispose();
     safetyController.dispose();
-    seriesController.dispose();
-    parallelController.dispose();
     super.dispose();
   }
 
-  double _number(
-    TextEditingController controller,
-    double fallback,
-  ) {
-    return double.tryParse(
-          controller.text.trim().replaceAll(',', '.'),
-        ) ??
-        fallback;
-  }
-
-  int _integer(
-    TextEditingController controller,
-    int fallback,
-  ) {
-    return int.tryParse(controller.text.trim()) ??
-        fallback;
-  }
-
-  double get psh =>
-      _number(pshController, 5.5).clamp(1, 10);
-
-  double get systemEfficiency =>
-      (_number(efficiencyController, 80) / 100)
-          .clamp(.5, .98);
-
-  double get batteryEfficiency =>
-      (_number(batteryEfficiencyController, 95) / 100)
-          .clamp(.7, .99);
-
-  double get dod =>
-      (_number(dodController, 80) / 100)
-          .clamp(.5, .95);
-
-  double get batteryVoltage =>
-      _number(
-        batteryVoltageController,
-        selectedInverter.batteryVoltage,
-      );
-
-  double get safetyMargin =>
-      _number(safetyController, 1.25)
-          .clamp(1, 2);
-
-  int get series =>
-      _integer(seriesController, 1).clamp(1, 24);
-
-  int get parallel =>
-      _integer(parallelController, 1).clamp(1, 12);
-
-  CalculationResult get result {
-    return SolarEngineering.calculate(
-      loads: loads,
-      panel: selectedPanel,
-      inverter: selectedInverter,
-      psh: psh,
-      systemEfficiency: systemEfficiency,
-      batteryEfficiency: batteryEfficiency,
-      dod: dod,
-      batteryVoltage: batteryVoltage,
-      safetyMargin: safetyMargin,
-      series: series,
-      parallel: parallel,
-      coldVocFactor: coldVocFactor,
-      hotVmpFactor: hotVmpFactor,
-    );
-  }
-
-  void _recalculate() {
-    setState(() {});
-  }
-
-  void _autoConfigure() {
-    final current = result;
-
-    final suggested =
-        SolarEngineering.suggestPvConfiguration(
-      panel: selectedPanel,
-      inverter: selectedInverter,
-      requiredPanels: current.requiredPanels,
-      coldVocFactor: coldVocFactor,
-      hotVmpFactor: hotVmpFactor,
-    );
-
-    if (suggested == null) {
-      _showMessage(
-        'لم يتم العثور على توصيل PV متوافق بالكامل مع حدود هذا العاكس واللوح.',
-        error: true,
-      );
-      return;
-    }
-
-    seriesController.text =
-        suggested.series.toString();
-
-    parallelController.text =
-        suggested.parallel.toString();
-
-    setState(() {});
-
-    _showMessage(
-      'تم اقتراح ${suggested.series}S × ${suggested.parallel}P = ${suggested.totalPanels} لوح.',
-    );
-  }
-
-  void _showMessage(
-    String message, {
-    bool error = false,
-  }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor:
-            error ? Colors.red.shade700 : null,
-      ),
-    );
-  }
-
-  void _addLoad() {
-    _showLoadDialog();
-  }
-
-  void _editLoad(int index) {
-    _showLoadDialog(
-      index: index,
-      existing: loads[index],
-    );
-  }
-
-  void _deleteLoad(int index) {
+  void calculate() {
     setState(() {
-      loads.removeAt(index);
+      psh = double.tryParse(pshController.text) ?? 5.5;
+
+      systemEfficiency =
+          (double.tryParse(efficiencyController.text) ?? 80.0) /
+              100.0;
+
+      batteryEfficiency =
+          (double.tryParse(batteryEfficiencyController.text) ?? 95.0) /
+              100.0;
+
+      dod =
+          (double.tryParse(dodController.text) ?? 80.0) /
+              100.0;
+
+      safetyMargin =
+          double.tryParse(safetyController.text) ?? 1.25;
+
+      result = SolarEngineering.calculate(
+        loads: loads,
+        panel: selectedPanel,
+        inverter: selectedInverter,
+        psh: psh,
+        systemEfficiency: systemEfficiency,
+        batteryEfficiency: batteryEfficiency,
+        dod: dod,
+        safetyMargin: safetyMargin,
+        series: series,
+        parallel: parallel,
+      );
+
+      suggested = SolarEngineering.suggestConfiguration(
+        panel: selectedPanel,
+        inverter: selectedInverter,
+        minimumPanels: result!.requiredPanels,
+      );
     });
   }
 
-  Future<void> _showLoadDialog({
-    int? index,
-    LoadItem? existing,
-  }) async {
-    final nameController = TextEditingController(
-      text: existing?.name ?? '',
-    );
+  void addLoad() {
+    setState(() {
+      loads.add(
+        LoadItem(
+          name: 'حمل جديد',
+          power: 100,
+          quantity: 1,
+          hours: 5,
+        ),
+      );
+    });
+  }
 
-    final powerController = TextEditingController(
-      text: existing?.power.toString() ?? '',
-    );
+  void removeLoad(int index) {
+    setState(() {
+      if (loads.length > 1) {
+        loads.removeAt(index);
+      }
+    });
+  }
 
-    final quantityController = TextEditingController(
-      text: existing?.quantity.toString() ?? '1',
-    );
+  void showLoadEditor(int index) {
+    final load = loads[index];
 
-    final hoursController = TextEditingController(
-      text: existing?.hours.toString() ?? '1',
-    );
+    final nameController =
+        TextEditingController(text: load.name);
+    final powerController =
+        TextEditingController(text: load.power.toString());
+    final quantityController =
+        TextEditingController(text: load.quantity.toString());
+    final hoursController =
+        TextEditingController(text: load.hours.toString());
 
-    String? error;
-
-    final saved = await showDialog<bool>(
+    showDialog(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                index == null
-                    ? 'إضافة حمل'
-                    : 'تعديل الحمل',
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: null,
-                      decoration: const InputDecoration(
-                        labelText: 'قالب سريع',
-                        prefixIcon: Icon(Icons.flash_on),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'ثلاجة',
-                          child: Text('ثلاجة - 150W'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'مروحة',
-                          child: Text('مروحة - 80W'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'مكيف',
-                          child: Text('مكيف - 1200W'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'تلفزيون',
-                          child: Text('تلفزيون - 120W'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'إضاءة',
-                          child: Text('إضاءة - 20W'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'غسالة',
-                          child: Text('غسالة - 500W'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'مضخة',
-                          child: Text('مضخة - 750W'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-
-                        final presets = {
-                          'ثلاجة': 150,
-                          'مروحة': 80,
-                          'مكيف': 1200,
-                          'تلفزيون': 120,
-                          'إضاءة': 20,
-                          'غسالة': 500,
-                          'مضخة': 750,
-                        };
-
-                        nameController.text = value;
-                        powerController.text =
-                            presets[value]!.toString();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'اسم الحمل',
-                        prefixIcon: Icon(Icons.devices),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: powerController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'قدرة الجهاز W',
-                        prefixIcon: Icon(Icons.bolt),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: quantityController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'العدد',
-                        prefixIcon: Icon(Icons.numbers),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: hoursController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'ساعات التشغيل يومياً',
-                        prefixIcon: Icon(Icons.schedule),
-                      ),
-                    ),
-                    if (error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        error!,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ],
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('تعديل الحمل'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'اسم الحمل',
+                  ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () =>
-                      Navigator.pop(dialogContext, false),
-                  child: const Text('إلغاء'),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: powerController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'القدرة W',
+                  ),
                 ),
-                FilledButton(
-                  onPressed: () {
-                    final name =
-                        nameController.text.trim();
-
-                    final power = double.tryParse(
-                      powerController.text
-                          .trim()
-                          .replaceAll(',', '.'),
-                    );
-
-                    final quantity =
-                        int.tryParse(
-                          quantityController.text.trim(),
-                        );
-
-                    final hours =
-                        double.tryParse(
-                          hoursController.text
-                              .trim()
-                              .replaceAll(',', '.'),
-                        );
-
-                    if (name.isEmpty ||
-                        power == null ||
-                        power <= 0 ||
-                        quantity == null ||
-                        quantity <= 0 ||
-                        hours == null ||
-                        hours <= 0 ||
-                        hours > 24) {
-                      setDialogState(() {
-                        error =
-                            'تحقق من البيانات. الساعات يجب أن تكون بين 0 و24.';
-                      });
-                      return;
-                    }
-
-                    final item = LoadItem(
-                      name: name,
-                      power: power,
-                      quantity: quantity,
-                      hours: hours,
-                    );
-
-                    if (index == null) {
-                      loads.add(item);
-                    } else {
-                      loads[index] = item;
-                    }
-
-                    Navigator.pop(
-                      dialogContext,
-                      true,
-                    );
-                  },
-                  child: const Text('حفظ'),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'العدد',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: hoursController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'ساعات التشغيل يومياً',
+                  ),
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  load.name = nameController.text.trim().isEmpty
+                      ? 'حمل'
+                      : nameController.text.trim();
+
+                  load.power =
+                      double.tryParse(powerController.text) ?? 100;
+
+                  load.quantity =
+                      int.tryParse(quantityController.text) ?? 1;
+
+                  load.hours =
+                      double.tryParse(hoursController.text) ?? 1;
+                });
+
+                Navigator.pop(context);
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
         );
       },
     );
+  }
 
-    nameController.dispose();
-    powerController.dispose();
-    quantityController.dispose();
-    hoursController.dispose();
+  void useSuggested() {
+    if (suggested == null) return;
 
-    if (saved == true) {
-      setState(() {});
-    }
+    setState(() {
+      series = suggested!.series;
+      parallel = suggested!.parallel;
+      calculate();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final r = result;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'التصميم الشمسي',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          'الحاسبة الهندسية',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'اقتراح تلقائي',
-            onPressed: _autoConfigure,
-            icon: const Icon(Icons.auto_awesome),
-          ),
-          IconButton(
-            tooltip: 'إعادة ضبط',
-            onPressed: () {
-              setState(() {
-                loads.clear();
-                seriesController.text = '5';
-                parallelController.text = '2';
-              });
-            },
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const SectionTitle(
+            title: 'الأحمال الكهربائية',
+            icon: Icons.power,
+          ),
+          const SizedBox(height: 10),
+          ...List.generate(
+            loads.length,
+            (index) {
+              final load = loads[index];
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: const Icon(Icons.electrical_services),
+                    ),
+                    title: Text(
+                      load.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${load.power.toStringAsFixed(0)} W × '
+                      '${load.quantity} × '
+                      '${load.hours.toStringAsFixed(1)} ساعة '
+                      '= ${load.dailyWh.toStringAsFixed(0)} Wh/day',
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          showLoadEditor(index);
+                        } else if (value == 'delete') {
+                          removeLoad(index);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text('تعديل'),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('حذف'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          OutlinedButton.icon(
+            onPressed: addLoad,
+            icon: const Icon(Icons.add),
+            label: const Text('إضافة حمل'),
+          ),
+          const SizedBox(height: 24),
+
+          const SectionTitle(
+            title: 'بيانات الألواح والإنفرتر',
+            icon: Icons.solar_power,
+          ),
+          const SizedBox(height: 12),
+
           AppCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle(
-                  title: '1. مواصفات النظام',
-                  subtitle:
-                      'اختر اللوح والعاكس وحدد ظروف التصميم',
-                ),
-                const SizedBox(height: 14),
                 DropdownButtonFormField<SolarPanel>(
-                  initialValue: selectedPanel,
+                  value: selectedPanel,
                   decoration: const InputDecoration(
                     labelText: 'اللوح الشمسي',
                     prefixIcon: Icon(Icons.solar_power),
                   ),
-                  items: solarPanels.map((panel) {
+                  items: SolarDatabase.panels.map((panel) {
                     return DropdownMenuItem(
                       value: panel,
-                      child: Text(
-                        '${panel.name} — ${panel.watt.toStringAsFixed(0)}W',
-                      ),
+                      child: Text(panel.title),
                     );
                   }).toList(),
                   onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      selectedPanel = value;
-                    });
+                    if (value != null) {
+                      setState(() {
+                        selectedPanel = value;
+                      });
+                    }
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<Inverter>(
-                  initialValue: selectedInverter,
+                  value: selectedInverter,
                   decoration: const InputDecoration(
-                    labelText: 'العاكس',
-                    prefixIcon: Icon(Icons.electrical_services),
+                    labelText: 'الإنفرتر',
+                    prefixIcon: Icon(
+                      Icons.electrical_services,
+                    ),
                   ),
-                  items: inverters.map((inverter) {
+                  items: SolarDatabase.inverters.map((inverter) {
                     return DropdownMenuItem(
                       value: inverter,
-                      child: Text(
-                        '${inverter.name} — ${inverter.powerKw.toStringAsFixed(1)}kW',
-                      ),
+                      child: Text(inverter.title),
                     );
                   }).toList(),
                   onChanged: (value) {
-                    if (value == null) return;
-
-                    setState(() {
-                      selectedInverter = value;
-                      batteryVoltageController.text =
-                          value.batteryVoltage
-                              .toStringAsFixed(0);
-                    });
+                    if (value != null) {
+                      setState(() {
+                        selectedInverter = value;
+                      });
+                    }
                   },
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: '2. ظروف التصميم',
-                  subtitle:
-                      'القيم الافتراضية مناسبة كبداية ويجب تعديلها حسب الموقع',
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: NumberField(
-                        controller: pshController,
-                        label: 'PSH',
-                        suffix: 'ساعة',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: NumberField(
-                        controller: efficiencyController,
-                        label: 'كفاءة النظام',
-                        suffix: '%',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: NumberField(
-                        controller:
-                            batteryEfficiencyController,
-                        label: 'كفاءة البطارية',
-                        suffix: '%',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: NumberField(
-                        controller: dodController,
-                        label: 'DoD',
-                        suffix: '%',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: NumberField(
-                        controller:
-                            batteryVoltageController,
-                        label: 'جهد البطارية',
-                        suffix: 'V',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: NumberField(
-                        controller: safetyController,
-                        label: 'معامل أمان الحمل',
-                        suffix: '×',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer
-                        .withValues(alpha: .35),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Text(
-                    'فحص الجهد يستخدم تقريباً +10% لـVoc في البرودة '
-                    'و-15% لـVmp في الحرارة. هذه قيم محافظة وليست بديلاً عن معاملات الحرارة الموجودة في Datasheet.',
-                    style: TextStyle(height: 1.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SectionTitle(
-                  title: '3. الأحمال',
-                  subtitle:
-                      '${loads.length} حمل • ${r.dailyWh.toStringAsFixed(0)} Wh/day',
-                  trailing: FilledButton.icon(
-                    onPressed: _addLoad,
-                    icon: const Icon(Icons.add),
-                    label: const Text('إضافة'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (loads.isEmpty)
-                  EmptyState(
-                    icon: Icons.electrical_services,
-                    title: 'لم تتم إضافة أحمال',
-                    subtitle:
-                        'أضف الأحمال الفعلية للحصول على تصميم صحيح.',
-                    action: FilledButton.icon(
-                      onPressed: _addLoad,
-                      icon: const Icon(Icons.add),
-                      label: const Text('إضافة أول حمل'),
-                    ),
-                  )
-                else
-                  Column(
-                    children: [
-                      ...List.generate(
-                        loads.length,
-                        (index) {
-                          final load = loads[index];
-
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: 8),
-                            child: Container(
-                              padding:
-                                  const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .dividerColor,
-                                ),
-                                borderRadius:
-                                    BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    child: const Icon(
-                                      Icons.bolt,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          load.name,
-                                          style:
-                                              const TextStyle(
-                                            fontWeight:
-                                                FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          '${load.power.toStringAsFixed(0)}W × ${load.quantity} × ${load.hours.toStringAsFixed(1)}h = ${load.dailyWh.toStringAsFixed(0)}Wh/day',
-                                          style:
-                                              Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () =>
-                                        _editLoad(index),
-                                    icon: const Icon(
-                                      Icons.edit_outlined,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () =>
-                                        _deleteLoad(index),
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SectionTitle(
-                  title: '4. توصيل الألواح',
-                  subtitle:
-                      'المقترح تلقائياً أدق من اختيار أرقام عشوائية',
-                  trailing: OutlinedButton.icon(
-                    onPressed:
-                        r.requiredPanels == 0
-                            ? null
-                            : _autoConfigure,
-                    icon: const Icon(
-                      Icons.auto_awesome,
-                    ),
-                    label: const Text('اقتراح'),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: NumberField(
-                        controller: seriesController,
-                        label: 'Series',
-                        suffix: 'ألواح',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: NumberField(
-                        controller: parallelController,
-                        label: 'Parallel',
-                        suffix: 'مسارات',
-                        onChanged: (_) => _recalculate(),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
 
           const SectionTitle(
-            title: '5. النتائج',
-            subtitle:
-                'نتائج التصميم المبدئي بناءً على المدخلات الحالية',
+            title: 'افتراضات التصميم',
+            icon: Icons.tune,
           ),
-
-          const SizedBox(height: 10),
-
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics:
-                const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.55,
-            children: [
-              ResultCard(
-                icon: Icons.bolt,
-                title: 'الطاقة اليومية',
-                value:
-                    '${r.dailyWh.toStringAsFixed(0)} Wh',
-              ),
-              ResultCard(
-                icon: Icons.speed,
-                title: 'الحمل الأقصى',
-                value:
-                    '${r.peakW.toStringAsFixed(0)} W',
-              ),
-              ResultCard(
-                icon: Icons.solar_power,
-                title: 'PV المطلوبة',
-                value:
-                    '${r.pvRequiredKw.toStringAsFixed(2)} kW',
-              ),
-              ResultCard(
-                icon: Icons.grid_view,
-                title: 'عدد الألواح',
-                value:
-                    '${r.requiredPanels}',
-              ),
-              ResultCard(
-                icon: Icons.battery_full,
-                title: 'البطارية',
-                value:
-                    '${r.batteryKwh.toStringAsFixed(2)} kWh',
-              ),
-              ResultCard(
-                icon: Icons.battery_charging_full,
-                title: 'البنك',
-                value:
-                    '${r.batteryAh.toStringAsFixed(0)} Ah',
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           AppCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle(
-                  title: '6. تحليل المصفوفة الشمسية',
-                  subtitle:
-                      'الفولت والتيار والقدرة بعد تطبيق التوصيل',
+                NumberField(
+                  controller: pshController,
+                  label: 'Peak Sun Hours',
+                  suffix: 'ساعة',
                 ),
                 const SizedBox(height: 12),
-                SpecRow(
-                  label: 'التوصيل',
-                  value:
-                      '${r.pv.series}S × ${r.pv.parallel}P',
+                NumberField(
+                  controller: efficiencyController,
+                  label: 'كفاءة النظام',
+                  suffix: '%',
                 ),
-                SpecRow(
-                  label: 'إجمالي الألواح',
-                  value:
-                      '${r.pv.totalPanels} لوح',
+                const SizedBox(height: 12),
+                NumberField(
+                  controller: batteryEfficiencyController,
+                  label: 'كفاءة البطارية',
+                  suffix: '%',
                 ),
-                SpecRow(
-                  label: 'قدرة المصفوفة',
-                  value:
-                      '${r.pv.arrayPowerKw.toStringAsFixed(2)} kW',
+                const SizedBox(height: 12),
+                NumberField(
+                  controller: dodController,
+                  label: 'Depth of Discharge',
+                  suffix: '%',
                 ),
-                SpecRow(
-                  label: 'Vmp عند STC',
-                  value:
-                      '${r.pv.vmp.toStringAsFixed(1)} V',
-                ),
-                SpecRow(
-                  label: 'Vmp تقديري في الحرارة',
-                  value:
-                      '${r.pv.hotVmp.toStringAsFixed(1)} V',
-                ),
-                SpecRow(
-                  label: 'Voc عند STC',
-                  value:
-                      '${r.pv.voc.toStringAsFixed(1)} V',
-                ),
-                SpecRow(
-                  label: 'Voc محافظ للبرد',
-                  value:
-                      '${r.pv.coldVoc.toStringAsFixed(1)} V',
-                ),
-                SpecRow(
-                  label: 'Isc للمصفوفة',
-                  value:
-                      '${r.pv.arrayIsc.toStringAsFixed(1)} A',
-                ),
-                SpecRow(
-                  label: 'Isc تقديري / MPPT',
-                  value:
-                      '${r.pv.currentPerMppt.toStringAsFixed(1)} A',
+                const SizedBox(height: 12),
+                NumberField(
+                  controller: safetyController,
+                  label: 'Safety Margin',
+                  suffix: '×',
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
 
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: '7. البطارية والعاكس',
-                  subtitle:
-                      'التيارات المطلوبة تقديرية لأغراض التصميم',
-                ),
-                const SizedBox(height: 12),
-                SpecRow(
-                  label: 'تيار البطارية عند الحمل',
-                  value:
-                      '${r.batteryLoadCurrent.toStringAsFixed(1)} A',
-                ),
-                SpecRow(
-                  label: 'تيار الشحن التقديري',
-                  value:
-                      '${r.estimatedChargeCurrent.toStringAsFixed(1)} A',
-                ),
-                SpecRow(
-                  label: 'أقصى شحن للعاكس',
-                  value:
-                      '${selectedInverter.maxChargeCurrent.toStringAsFixed(0)} A',
-                ),
-                SpecRow(
-                  label: 'أقصى تفريغ للعاكس',
-                  value:
-                      '${selectedInverter.maxDischargeCurrent.toStringAsFixed(0)} A',
-                ),
-                SpecRow(
-                  label: 'كفاءة العاكس',
-                  value:
-                      '${(selectedInverter.efficiency * 100).toStringAsFixed(1)}%',
-                ),
-              ],
-            ),
+          const SectionTitle(
+            title: 'تكوين الألواح',
+            icon: Icons.grid_view,
           ),
-
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           AppCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SectionTitle(
-                  title: '8. فحص التوافق الهندسي',
-                  subtitle: r.allOk
-                      ? 'التوصيل الحالي يجتاز الفحوصات الأساسية'
-                      : 'يوجد بند أو أكثر يحتاج إلى تعديل',
-                  trailing: Icon(
-                    r.allOk
-                        ? Icons.verified
-                        : Icons.warning_amber_rounded,
-                    color: r.allOk
-                        ? Colors.green
-                        : Colors.orange,
-                    size: 30,
+                Row(
+                  children: [
+                    Expanded(
+                      child: NumberField(
+                        controller: TextEditingController(
+                          text: series.toString(),
+                        ),
+                        label: 'Series',
+                        suffix: 'لوح',
+                        onChanged: (value) {
+                          final parsed = int.tryParse(value);
+                          if (parsed != null && parsed > 0) {
+                            series = parsed;
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: NumberField(
+                        controller: TextEditingController(
+                          text: parallel.toString(),
+                        ),
+                        label: 'Parallel',
+                        suffix: 'String',
+                        onChanged: (value) {
+                          final parsed = int.tryParse(value);
+                          if (parsed != null && parsed > 0) {
+                            parallel = parsed;
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'الإجمالي: ${series * parallel} لوح',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                CheckRow(
-                  label: 'قدرة PV ضمن حد العاكس',
-                  ok: r.pvPowerOk,
-                  detail:
-                      '${r.pv.arrayPowerKw.toStringAsFixed(2)} / ${selectedInverter.maxPvPowerKw.toStringAsFixed(2)} kW',
-                ),
-
-                CheckRow(
-                  label: 'Voc البارد ضمن الحد',
-                  ok: r.coldVocOk,
-                  detail:
-                      '${r.pv.coldVoc.toStringAsFixed(1)} / ${selectedInverter.maxPvVoc.toStringAsFixed(0)} V',
-                ),
-
-                CheckRow(
-                  label: 'Vmp عند الحرارة فوق MPPT الأدنى',
-                  ok: r.mpptLowOk,
-                  detail:
-                      '${r.pv.hotVmp.toStringAsFixed(1)} / ${selectedInverter.mpptMin.toStringAsFixed(0)} V',
-                ),
-
-                CheckRow(
-                  label: 'Vmp ضمن MPPT الأعلى',
-                  ok: r.mpptHighOk,
-                  detail:
-                      '${r.pv.vmp.toStringAsFixed(1)} / ${selectedInverter.mpptMax.toStringAsFixed(0)} V',
-                ),
-
-                CheckRow(
-                  label: 'تيار MPPT',
-                  ok: r.mpptCurrentOk,
-                  detail:
-                      '${r.pv.currentPerMppt.toStringAsFixed(1)} / ${selectedInverter.maxPvCurrent.toStringAsFixed(1)} A',
-                ),
-
-                CheckRow(
-                  label: 'عدد الألواح يحقق الطاقة المطلوبة',
-                  ok: r.panelCountOk,
-                  detail:
-                      '${r.pv.totalPanels} / ${r.requiredPanels} لوح',
-                ),
-
-                CheckRow(
-                  label: 'قدرة العاكس مع معامل الأمان',
-                  ok: r.inverterPowerOk,
-                  detail:
-                      '${(r.peakW * safetyMargin).toStringAsFixed(0)} / ${(selectedInverter.powerKw * 1000).toStringAsFixed(0)} W',
-                ),
-
-                CheckRow(
-                  label: 'جهد البطارية مطابق للعاكس',
-                  ok: r.batteryVoltageOk,
-                  detail:
-                      '${batteryVoltage.toStringAsFixed(0)} / ${selectedInverter.batteryVoltage.toStringAsFixed(0)} V',
-                ),
               ],
             ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
 
-          AppCard(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+          FilledButton.icon(
+            onPressed: calculate,
+            icon: const Icon(Icons.calculate),
+            label: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'احسب النظام',
+                style: TextStyle(fontSize: 17),
+              ),
+            ),
+          ),
+
+          if (result != null) ...[
+            const SizedBox(height: 26),
+            const SectionTitle(
+              title: 'نتائج التصميم',
+              icon: Icons.analytics,
+            ),
+            const SizedBox(height: 12),
+
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.3,
               children: [
-                const SectionTitle(
-                  title: 'ملاحظة هندسية',
-                  subtitle: 'قبل التنفيذ الفعلي',
+                MetricCard(
+                  title: 'الاستهلاك اليومي',
+                  value:
+                      '${result!.dailyWh.toStringAsFixed(0)} Wh',
+                  icon: Icons.bolt,
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'هذه الحاسبة أداة تصميم مبدئي. يجب قبل التنفيذ مراجعة '
-                  'Datasheet الفعلي للعاكس واللوح والبطارية، معاملات الحرارة، '
-                  'أقصى تيار لكل MPPT، توزيع السلاسل على MPPTs، مقاطع الكابلات، '
-                  'هبوط الجهد، الحمايات DC/AC، التأريض، وخصائص الأحمال الحركية.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(height: 1.6),
+                MetricCard(
+                  title: 'الحمل الأقصى',
+                  value:
+                      '${result!.peakW.toStringAsFixed(0)} W',
+                  icon: Icons.power,
+                ),
+                MetricCard(
+                  title: 'PV المطلوبة',
+                  value:
+                      '${result!.pvRequiredKw.toStringAsFixed(2)} kW',
+                  icon: Icons.solar_power,
+                ),
+                MetricCard(
+                  title: 'عدد الألواح',
+                  value:
+                      '${result!.requiredPanels}',
+                  icon: Icons.grid_view,
+                ),
+                MetricCard(
+                  title: 'البطارية',
+                  value:
+                      '${result!.batteryKwh.toStringAsFixed(2)} kWh',
+                  icon: Icons.battery_full,
+                ),
+                MetricCard(
+                  title: 'البطارية Ah',
+                  value:
+                      '${result!.batteryAh.toStringAsFixed(0)} Ah',
+                  icon: Icons.battery_charging_full,
+                ),
+                MetricCard(
+                  title: 'تيار الحمل DC',
+                  value:
+                      '${result!.batteryLoadCurrent.toStringAsFixed(1)} A',
+                  icon: Icons.electric_bolt,
+                ),
+                MetricCard(
+                  title: 'تيار الشحن التقريبي',
+                  value:
+                      '${result!.estimatedChargeCurrent.toStringAsFixed(1)} A',
+                  icon: Icons.battery_charging_full,
                 ),
               ],
             ),
-          ),
+
+            const SizedBox(height: 18),
+
+            ResultCard(
+              title: 'التكوين الحالي',
+              child: Column(
+                children: [
+                  SpecRow(
+                    label: 'Series',
+                    value: '${series}S',
+                  ),
+                  SpecRow(
+                    label: 'Parallel',
+                    value: '${parallel}P',
+                  ),
+                  SpecRow(
+                    label: 'إجمالي الألواح',
+                    value: '${result!.actualPanels}',
+                  ),
+                  SpecRow(
+                    label: 'قدرة المصفوفة',
+                    value:
+                        '${result!.actualPvKw.toStringAsFixed(2)} kW',
+                  ),
+                  SpecRow(
+                    label: 'Cold Voc',
+                    value:
+                        '${result!.coldVoc.toStringAsFixed(1)} V',
+                  ),
+                  SpecRow(
+                    label: 'Hot Vmp',
+                    value:
+                        '${result!.hotVmp.toStringAsFixed(1)} V',
+                  ),
+                  SpecRow(
+                    label: 'Current / MPPT',
+                    value:
+                        '${result!.currentPerMppt.toStringAsFixed(1)} A',
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            ResultCard(
+              title: 'الفحوصات الهندسية',
+              child: Column(
+                children: [
+                  CheckRow(
+                    title: 'قدرة الإنفرتر مناسبة للحمل',
+                    ok: result!.peakOk,
+                  ),
+                  CheckRow(
+                    title: 'جهد البطارية',
+                    ok: result!.batteryVoltageOk,
+                  ),
+                  CheckRow(
+                    title: 'قدرة PV ضمن حد الإنفرتر',
+                    ok: result!.pvPowerOk,
+                  ),
+                  CheckRow(
+                    title: 'Cold Voc ضمن الحد',
+                    ok: result!.vocOk,
+                  ),
+                  CheckRow(
+                    title: 'Hot Vmp داخل نطاق MPPT',
+                    ok: result!.vmpOk,
+                  ),
+                  CheckRow(
+                    title: 'تيار MPPT ضمن الحد',
+                    ok: result!.currentOk,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            if (suggested != null)
+              ResultCard(
+                title: 'التكوين المقترح تلقائياً',
+                child: Column(
+                  children: [
+                    Text(
+                      '${suggested!.series}S × '
+                      '${suggested!.parallel}P',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${suggested!.totalPanels} لوح • '
+                      '${suggested!.arrayPowerKw.toStringAsFixed(2)} kW',
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Voc: ${suggested!.coldVoc.toStringAsFixed(1)} V',
+                    ),
+                    Text(
+                      'Vmp: ${suggested!.hotVmp.toStringAsFixed(1)} V',
+                    ),
+                    Text(
+                      'Current/MPPT: '
+                      '${suggested!.currentPerMppt.toStringAsFixed(1)} A',
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: useSuggested,
+                      icon: const Icon(Icons.check),
+                      label: const Text(
+                        'استخدام التكوين المقترح',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
 
           const SizedBox(height: 30),
+
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تنبيه هندسي مهم',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'الحسابات داخل التطبيق تساعد في التصميم الأولي. لا تعتبر بديلاً عن مراجعة Datasheet الأصلي، درجات حرارة الموقع، معاملات الحرارة الفعلية للوح، تيارات MPPT الفعلية، مقاطع الكابلات، هبوط الجهد، الحمايات DC/AC، التأريض، وتيار الإقلاع للمحركات.',
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ============================================================================
+// ============================================================
 // MARKET
-// ============================================================================
+// ============================================================
 
 class MarketPage extends StatefulWidget {
   const MarketPage({super.key});
@@ -2027,231 +1626,212 @@ class MarketPage extends StatefulWidget {
 }
 
 class _MarketPageState extends State<MarketPage> {
-  final TextEditingController searchController =
-      TextEditingController();
-
+  String search = '';
   String category = 'الكل';
 
-  @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
-  }
+  List<dynamic> get products {
+    final List<dynamic> all = [
+      ...SolarDatabase.panels,
+      ...SolarDatabase.inverters,
+    ];
 
-  List<Inverter> get filtered {
-    final search =
-        searchController.text.trim().toLowerCase();
+    return all.where((item) {
+      final title = item is SolarPanel
+          ? item.title
+          : (item as Inverter).title;
 
-    return inverters.where((item) {
-      final categoryMatch =
-          category == 'الكل' ||
-          item.category == category;
+      final matchesSearch =
+          title.toLowerCase().contains(search.toLowerCase());
 
-      final searchMatch =
-          search.isEmpty ||
-          item.name.toLowerCase().contains(search) ||
-          item.brand.toLowerCase().contains(search) ||
-          item.model.toLowerCase().contains(search);
+      if (category == 'الكل') {
+        return matchesSearch;
+      }
 
-      return categoryMatch && searchMatch;
+      if (category == 'الألواح') {
+        return item is SolarPanel && matchesSearch;
+      }
+
+      if (category == 'الإنفرترات') {
+        return item is Inverter && matchesSearch;
+      }
+
+      return matchesSearch;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final products = filtered;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'السوق',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          TextField(
-            controller: searchController,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'ابحث عن العاكس أو الماركة...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      onPressed: () {
-                        searchController.clear();
-                        setState(() {});
-                      },
-                      icon: const Icon(Icons.clear),
-                    ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                'الكل',
-                'ممتازة',
-                'متوسطة',
-                'اقتصادية',
-              ].map((item) {
-                return Padding(
-                  padding:
-                      const EdgeInsets.only(left: 8),
-                  child: ChoiceChip(
-                    label: Text(item),
-                    selected: category == item,
-                    onSelected: (_) {
-                      setState(() {
-                        category = item;
-                      });
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Text(
-            '${products.length} منتج',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          if (products.isEmpty)
-            const EmptyState(
-              icon: Icons.search_off,
-              title: 'لا توجد نتائج',
-              subtitle:
-                  'جرّب تغيير البحث أو التصنيف.',
-            )
-          else
-            ...products.map(
-              (product) => Padding(
-                padding:
-                    const EdgeInsets.only(bottom: 10),
-                child: ProductCard(
-                  inverter: product,
-                ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  search = value;
+                });
+              },
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'ابحث عن منتج...',
               ),
             ),
+          ),
+          SizedBox(
+            height: 45,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _categoryButton('الكل'),
+                _categoryButton('الألواح'),
+                _categoryButton('الإنفرترات'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: products.isEmpty
+                ? const EmptyState(
+                    icon: Icons.search_off,
+                    title: 'لا توجد نتائج',
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final item = products[index];
+
+                      if (item is SolarPanel) {
+                        return _panelCard(item);
+                      }
+
+                      return _inverterCard(item as Inverter);
+                    },
+                  ),
+          ),
         ],
       ),
     );
   }
-}
 
-class ProductCard extends StatelessWidget {
-  final Inverter inverter;
+  Widget _categoryButton(String value) {
+    final selected = category == value;
 
-  const ProductCard({
-    super.key,
-    required this.inverter,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  ProductDetailsPage(
-                inverter: inverter,
-              ),
-            ),
-          );
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: ChoiceChip(
+        selected: selected,
+        label: Text(value),
+        onSelected: (_) {
+          setState(() {
+            category = value;
+          });
         },
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Row(
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
-                  borderRadius:
-                      BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  Icons.electrical_services,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      inverter.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '${inverter.powerKw.toStringAsFixed(1)}kW • ${inverter.batteryVoltage.toStringAsFixed(0)}V • ${inverter.mpptCount} MPPT',
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      inverter.category,
-                      style: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_left,
-              ),
-            ],
+      ),
+    );
+  }
+
+  Widget _panelCard(SolarPanel panel) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        child: ListTile(
+          leading: const CircleAvatar(
+            child: Icon(Icons.solar_power),
           ),
+          title: Text(
+            panel.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          subtitle: Text(
+            'Voc ${panel.voc}V • '
+            'Vmp ${panel.vmp}V • '
+            'Isc ${panel.isc}A',
+          ),
+          trailing: const Icon(Icons.chevron_left),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProductDetailsPage(
+                  panel: panel,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _inverterCard(Inverter inverter) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        child: ListTile(
+          leading: const CircleAvatar(
+            child: Icon(Icons.electrical_services),
+          ),
+          title: Text(
+            inverter.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          subtitle: Text(
+            '${inverter.powerKw.toStringAsFixed(1)} kW • '
+            '${inverter.batteryVoltage.toStringAsFixed(0)}V • '
+            '${inverter.mpptCount} MPPT',
+          ),
+          trailing: const Icon(Icons.chevron_left),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProductDetailsPage(
+                  inverter: inverter,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// ============================================================================
+// ============================================================
 // PRODUCT DETAILS
-// ============================================================================
+// ============================================================
 
 class ProductDetailsPage extends StatelessWidget {
-  final Inverter inverter;
+  final SolarPanel? panel;
+  final Inverter? inverter;
 
   const ProductDetailsPage({
     super.key,
-    required this.inverter,
+    this.panel,
+    this.inverter,
   });
 
-  Future<void> _openOfficial() async {
-    if (inverter.officialUrl.isEmpty) return;
+  Future<void> openOfficialWebsite() async {
+    if (inverter == null ||
+        inverter!.officialUrl.trim().isEmpty) {
+      return;
+    }
 
-    final uri = Uri.parse(inverter.officialUrl);
+    final uri = Uri.parse(inverter!.officialUrl);
 
     await launchUrl(
       uri,
@@ -2261,6 +1841,10 @@ class ProductDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String title = panel != null
+        ? panel!.title
+        : inverter!.title;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('تفاصيل المنتج'),
@@ -2272,209 +1856,176 @@ class ProductDetailsPage extends StatelessWidget {
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 38,
-                  child: const Icon(
-                    Icons.electrical_services,
-                    size: 38,
+                  radius: 36,
+                  child: Icon(
+                    panel != null
+                        ? Icons.solar_power
+                        : Icons.electrical_services,
+                    size: 36,
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  inverter.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${inverter.type} • ${inverter.category}',
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CalculatorPage(
-                                initialInverter:
-                                    inverter,
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.calculate,
-                        ),
-                        label:
-                            const Text('استخدم في الحاسبة'),
-                      ),
-                    ),
-                  ],
-                ),
-                if (inverter.officialUrl.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _openOfficial,
-                    icon: const Icon(
-                      Icons.open_in_new,
-                    ),
-                    label: const Text(
-                      'الموقع الرسمي',
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: 'المواصفات الكهربائية',
-                  subtitle: 'بيانات مرجعية للتصميم',
                 ),
                 const SizedBox(height: 12),
-                SpecRow(
-                  label: 'قدرة العاكس',
-                  value:
-                      '${inverter.powerKw.toStringAsFixed(1)} kW',
-                ),
-                SpecRow(
-                  label: 'جهد البطارية',
-                  value:
-                      '${inverter.batteryVoltage.toStringAsFixed(0)} V',
-                ),
-                SpecRow(
-                  label: 'أقصى PV',
-                  value:
-                      '${inverter.maxPvPowerKw.toStringAsFixed(1)} kW',
-                ),
-                SpecRow(
-                  label: 'أقصى Voc',
-                  value:
-                      '${inverter.maxPvVoc.toStringAsFixed(0)} V',
-                ),
-                SpecRow(
-                  label: 'MPPT',
-                  value:
-                      '${inverter.mpptMin.toStringAsFixed(0)}–${inverter.mpptMax.toStringAsFixed(0)} V',
-                ),
-                SpecRow(
-                  label: 'عدد MPPT',
-                  value:
-                      '${inverter.mpptCount}',
-                ),
-                SpecRow(
-                  label: 'تيار PV',
-                  value:
-                      '${inverter.maxPvCurrent.toStringAsFixed(1)} A',
-                ),
-                SpecRow(
-                  label: 'أقصى شحن',
-                  value:
-                      '${inverter.maxChargeCurrent.toStringAsFixed(0)} A',
-                ),
-                SpecRow(
-                  label: 'أقصى تفريغ',
-                  value:
-                      '${inverter.maxDischargeCurrent.toStringAsFixed(0)} A',
-                ),
-                SpecRow(
-                  label: 'الكفاءة',
-                  value:
-                      '${(inverter.efficiency * 100).toStringAsFixed(1)}%',
-                ),
-                SpecRow(
-                  label: 'الحماية',
-                  value: inverter.ipRating,
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 16),
 
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Text(
-              'تنبيه: لا تعتمد هذه البيانات وحدها في التنفيذ. '
-              'يجب مطابقة رقم الموديل والمواصفات مع Datasheet '
-              'النسخة الموجودة فعلياً قبل تحديد السلاسل والحمايات والكابلات.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(
-                    height: 1.6,
-                    fontWeight: FontWeight.w600,
+          if (panel != null)
+            AppCard(
+              child: Column(
+                children: [
+                  const SectionTitle(
+                    title: 'مواصفات اللوح',
+                    icon: Icons.info_outline,
                   ),
+                  const SizedBox(height: 10),
+                  SpecRow(
+                    label: 'القدرة',
+                    value: '${panel!.watt.toStringAsFixed(0)} W',
+                  ),
+                  SpecRow(
+                    label: 'Voc',
+                    value: '${panel!.voc} V',
+                  ),
+                  SpecRow(
+                    label: 'Vmp',
+                    value: '${panel!.vmp} V',
+                  ),
+                  SpecRow(
+                    label: 'Isc',
+                    value: '${panel!.isc} A',
+                  ),
+                  SpecRow(
+                    label: 'Imp',
+                    value: '${panel!.imp} A',
+                  ),
+                ],
+              ),
             ),
-          ),
+
+          if (inverter != null)
+            AppCard(
+              child: Column(
+                children: [
+                  const SectionTitle(
+                    title: 'مواصفات الإنفرتر',
+                    icon: Icons.info_outline,
+                  ),
+                  const SizedBox(height: 10),
+                  SpecRow(
+                    label: 'القدرة',
+                    value:
+                        '${inverter!.powerKw.toStringAsFixed(1)} kW',
+                  ),
+                  SpecRow(
+                    label: 'البطارية',
+                    value:
+                        '${inverter!.batteryVoltage.toStringAsFixed(0)} V',
+                  ),
+                  SpecRow(
+                    label: 'PV Max',
+                    value:
+                        '${inverter!.maxPvPowerKw.toStringAsFixed(1)} kW',
+                  ),
+                  SpecRow(
+                    label: 'Max Voc',
+                    value:
+                        '${inverter!.maxPvVoc.toStringAsFixed(0)} V',
+                  ),
+                  SpecRow(
+                    label: 'MPPT',
+                    value:
+                        '${inverter!.mpptMin.toStringAsFixed(0)}–'
+                        '${inverter!.mpptMax.toStringAsFixed(0)} V',
+                  ),
+                  SpecRow(
+                    label: 'عدد MPPT',
+                    value: '${inverter!.mpptCount}',
+                  ),
+                  SpecRow(
+                    label: 'Max PV Current',
+                    value:
+                        '${inverter!.maxPvCurrent.toStringAsFixed(1)} A',
+                  ),
+                  SpecRow(
+                    label: 'الكفاءة',
+                    value:
+                        '${inverter!.efficiency.toStringAsFixed(1)}%',
+                  ),
+                  SpecRow(
+                    label: 'الحماية',
+                    value: inverter!.ipRating,
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 16),
+
+          if (inverter != null &&
+              inverter!.officialUrl.isNotEmpty)
+            OutlinedButton.icon(
+              onPressed: openOfficialWebsite,
+              icon: const Icon(Icons.open_in_browser),
+              label: const Text('الموقع الرسمي'),
+            ),
         ],
       ),
     );
   }
 }
 
-// ============================================================================
-// LOCATION / TILT
-// ============================================================================
+// ============================================================
+// LOCATION
+// ============================================================
 
 class LocationPage extends StatefulWidget {
   const LocationPage({super.key});
 
   @override
-  State<LocationPage> createState() =>
-      _LocationPageState();
+  State<LocationPage> createState() => _LocationPageState();
 }
 
-class _LocationPageState
-    extends State<LocationPage> {
-  late final TextEditingController latitudeController;
+class _LocationPageState extends State<LocationPage> {
+  final TextEditingController latitudeController =
+      TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
+  final TextEditingController longitudeController =
+      TextEditingController();
 
-    latitudeController =
-        TextEditingController(text: '15.5007');
-  }
+  double tilt = 15.0;
+  String direction = 'جنوب';
 
   @override
   void dispose() {
     latitudeController.dispose();
+    longitudeController.dispose();
     super.dispose();
   }
 
-  double get latitude =>
-      (double.tryParse(
-            latitudeController.text
-                .trim()
-                .replaceAll(',', '.'),
-          ) ??
-          15.5007)
-          .clamp(-90, 90);
+  double calculateApproxTilt() {
+    final latitude =
+        double.tryParse(latitudeController.text);
 
-  double get annualTilt =>
-      latitude.abs();
+    if (latitude == null) {
+      return 15.0;
+    }
 
-  double get summerTilt =>
-      math.max(0, latitude.abs() - 15);
+    final absLat = latitude.abs();
 
-  double get winterTilt =>
-      latitude.abs() + 15;
-
-  String get direction =>
-      latitude >= 0 ? 'الجنوب' : 'الشمال';
+    return math.max(
+      5.0,
+      math.min(absLat + 5.0, 30.0),
+    ).toDouble();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2482,119 +2033,106 @@ class _LocationPageState
       appBar: AppBar(
         title: const Text(
           'الموقع والميل',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const AppCard(
+            child: Text(
+              'أدخل إحداثيات الموقع للحصول على تقدير مبدئي لميل الألواح واتجاهها. هذه القيمة إرشادية ويجب تحسينها حسب الموقع الفعلي والظروف المحلية.',
+            ),
+          ),
+          const SizedBox(height: 16),
           AppCard(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
               children: [
-                const SectionTitle(
-                  title: 'خط العرض',
-                  subtitle:
-                      'أدخل خط العرض بالموجب للشمال والسالب للجنوب',
-                ),
-                const SizedBox(height: 14),
                 TextField(
                   controller: latitudeController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(
+                  keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                     signed: true,
                   ),
-                  onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
-                    labelText: 'خط العرض',
-                    suffixText: '°',
-                    prefixIcon:
-                        Icon(Icons.location_on),
+                    labelText: 'خط العرض Latitude',
+                    prefixIcon: Icon(Icons.location_on),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics:
-                const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.5,
-            children: [
-              ResultCard(
-                icon: Icons.explore,
-                title: 'الاتجاه التقريبي',
-                value: direction,
-              ),
-              ResultCard(
-                icon: Icons.solar_power,
-                title: 'الميل السنوي',
-                value:
-                    '${annualTilt.toStringAsFixed(1)}°',
-              ),
-              ResultCard(
-                icon: Icons.wb_sunny,
-                title: 'ميل الصيف',
-                value:
-                    '${summerTilt.toStringAsFixed(1)}°',
-              ),
-              ResultCard(
-                icon: Icons.ac_unit,
-                title: 'ميل الشتاء',
-                value:
-                    '${winterTilt.toStringAsFixed(1)}°',
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: 'قاعدة هندسية تقريبية',
-                  subtitle:
-                      'ليست بديلاً عن تحليل الشمس والظلال',
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  'للمواقع في النصف الشمالي يكون الاتجاه العام للألواح نحو الجنوب، '
-                  'وفي النصف الجنوبي نحو الشمال. الميل السنوي الثابت يمكن تقديره '
-                  'مبدئياً من قيمة خط العرض.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(height: 1.6),
+                TextField(
+                  controller: longitudeController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'خط الطول Longitude',
+                    prefixIcon: Icon(Icons.explore),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: direction,
+                  decoration: const InputDecoration(
+                    labelText: 'الاتجاه',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'جنوب',
+                      child: Text('جنوب'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'شمال',
+                      child: Text('شمال'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'شرق',
+                      child: Text('شرق'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'غرب',
+                      child: Text('غرب'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        direction = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      tilt = calculateApproxTilt();
+                    });
+                  },
+                  icon: const Icon(Icons.calculate),
+                  label: const Text('حساب الميل التقريبي'),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Text(
-              'للتصميم الاحترافي النهائي يجب دراسة الظلال، '
-              'مسار الشمس، زاوية السطح، المساحة المتاحة، '
-              'اتجاه السطح، ودرجة الحرارة المحلية.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(
-                    height: 1.6,
-                    fontWeight: FontWeight.w600,
-                  ),
+          const SizedBox(height: 18),
+          ResultCard(
+            title: 'النتيجة التقريبية',
+            child: Column(
+              children: [
+                MetricCard(
+                  title: 'الميل',
+                  value: '${tilt.toStringAsFixed(1)}°',
+                  icon: Icons.architecture,
+                ),
+                const SizedBox(height: 12),
+                MetricCard(
+                  title: 'الاتجاه',
+                  value: direction,
+                  icon: Icons.explore,
+                ),
+              ],
             ),
           ),
         ],
@@ -2603,9 +2141,9 @@ class _LocationPageState
   }
 }
 
-// ============================================================================
+// ============================================================
 // MORE
-// ============================================================================
+// ============================================================
 
 class MorePage extends StatelessWidget {
   const MorePage({super.key});
@@ -2616,91 +2154,56 @@ class MorePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'المزيد',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ToolCard(
-            icon: Icons.person_outline,
-            title: 'عن التطبيق',
-            subtitle:
-                'Sudan SO والمطور والفكرة',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AboutPage(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 10),
-
-          ToolCard(
-            icon: Icons.calculate_outlined,
-            title: 'الحاسبة',
-            subtitle:
-                'فتح حاسبة التصميم مباشرة',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const CalculatorPage(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 10),
-
-          ToolCard(
-            icon: Icons.storefront_outlined,
-            title: 'السوق',
-            subtitle:
-                'استعراض العاكسات المتوفرة',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const MarketPage(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 20),
-
           AppCard(
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.info_outline),
+              ),
+              title: const Text(
+                'عن التطبيق',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: const Text(
+                'معلومات عن Sudan SO والمطور',
+              ),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AboutPage(),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          const AppCard(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Sudan SO',
                   style: TextStyle(
                     fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
-                  'Solar Engineering & Design',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge,
+                  'Solar Energy Calculator & Market',
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 8),
                 Text(
-                  'نسخة احترافية للحسابات الشمسية المبدئية.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(height: 1.5),
+                  'أداة مساعدة للمهندسين والفنيين والمستخدمين في تصميم وفهم أنظمة الطاقة الشمسية.',
                 ),
               ],
             ),
@@ -2711,18 +2214,41 @@ class MorePage extends StatelessWidget {
   }
 }
 
-// ============================================================================
+// ============================================================
 // ABOUT
-// ============================================================================
+// ============================================================
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
-  Future<void> _openWhatsApp() async {
+  Future<void> openWhatsApp() async {
+    final message = Uri.encodeComponent(
+      'السلام عليكم، أريد التواصل بخصوص تطبيق Sudan SO.',
+    );
+
     final uri = Uri.parse(
-      'https://wa.me/249916537047?text=${Uri.encodeComponent(
-        'السلام عليكم، أريد الاستفسار عن تصميم نظام شمسي.',
-      )}',
+      'https://wa.me/249916537047?text=$message',
+    );
+
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void> openEmail() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'SOLARSD2090@gmail.com',
+      queryParameters: {
+        'subject': 'اقتراح / مشكلة في تطبيق Sudan SO',
+        'body':
+            'السلام عليكم،\n\n'
+            'أرغب في إرسال اقتراح أو الإبلاغ عن مشكلة في تطبيق Sudan SO.\n\n'
+            'نوع الرسالة:\n'
+            'الاقتراح / المشكلة:\n\n'
+            'تفاصيل إضافية:\n',
+      },
     );
 
     await launchUrl(
@@ -2735,122 +2261,53 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('عن التطبيق'),
+        title: const Text(
+          'عن التطبيق',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          AppCard(
-            child: Column(
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF087F5B),
+                  Color(0xFF0B6E4F),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Column(
               children: [
                 CircleAvatar(
                   radius: 42,
-                  backgroundColor: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
+                  backgroundColor: Colors.white,
                   child: Icon(
                     Icons.solar_power,
-                    size: 45,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary,
+                    size: 48,
+                    color: Color(0xFF087F5B),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16),
+                Text(
                   'Sudan SO',
                   style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Solar Engineering Calculator',
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'تطبيق متخصص في الحسابات والتصميمات '
-                  'المبدئية لأنظمة الطاقة الشمسية، '
-                  'مع أدوات لحساب الأحمال، الألواح، '
-                  'البطاريات والعاكسات وفحص التوافق الكهربائي.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(height: 1.7),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: 'المهندس',
-                  subtitle: 'تطوير ومحتوى التطبيق',
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'حمزة الطيب',
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'مهتم بالطاقة الشمسية ولديه خبرة واسعة '
-                  'في مجال أنظمة الطاقة الشمسية والحلول '
-                  'الكهربائية المرتبطة بها.',
-                  style: TextStyle(height: 1.6),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _openWhatsApp,
-                    icon: const Icon(
-                      Icons.chat,
-                    ),
-                    label: const Text(
-                      'تواصل عبر واتساب',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Center(
-                  child: Text(
-                    '+249 91 653 7047',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          AppCard(
-            child: const Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                SectionTitle(
-                  title: 'تنبيه',
-                  subtitle: 'الاستخدام الهندسي',
-                ),
-                SizedBox(height: 10),
+                SizedBox(height: 8),
                 Text(
-                  'نتائج التطبيق هي نتائج تصميم مبدئي. '
-                  'أي تنفيذ فعلي يجب أن يعتمد على Datasheet '
-                  'الأجهزة الحقيقية، القياسات الميدانية، '
-                  'الكود الكهربائي المحلي، ومتطلبات الحماية.',
-                  style: TextStyle(height: 1.6),
+                  'Solar Energy Calculator & Market',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
                 ),
               ],
             ),
@@ -2858,23 +2315,205 @@ class AboutPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SectionTitle(
+                  title: 'عن تطبيق Sudan SO',
+                  icon: Icons.info_outline,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Sudan SO هو تطبيق متخصص في مجال الطاقة الشمسية، تم تصميمه ليكون أداة عملية تساعد المستخدم على إجراء الحسابات الأولية لأنظمة الطاقة الشمسية وفهم العلاقة بين الأحمال والألواح الشمسية والإنفرتر والبطاريات.',
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'يهدف التطبيق إلى تبسيط الحسابات الهندسية وتوفير أدوات تساعد المهندس والفني والمستخدم على الوصول إلى تصور مبدئي مناسب للنظام قبل مرحلة التنفيذ.',
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SectionTitle(
+                  title: 'ماذا يوفر التطبيق؟',
+                  icon: Icons.apps,
+                ),
+                SizedBox(height: 12),
+                InfoBullet(
+                  text: 'حساب استهلاك الطاقة اليومي.',
+                ),
+                InfoBullet(
+                  text: 'حساب الحمل الأقصى.',
+                ),
+                InfoBullet(
+                  text: 'تقدير قدرة الألواح المطلوبة.',
+                ),
+                InfoBullet(
+                  text: 'تقدير سعة البطاريات.',
+                ),
+                InfoBullet(
+                  text: 'فحص تكوين Series و Parallel.',
+                ),
+                InfoBullet(
+                  text: 'فحص Voc و Vmp ونطاق MPPT.',
+                ),
+                InfoBullet(
+                  text: 'فحص تيار MPPT.',
+                ),
+                InfoBullet(
+                  text: 'قاعدة بيانات للألواح والإنفرترات.',
+                ),
+                InfoBullet(
+                  text: 'معلومات مبدئية عن الموقع وميل الألواح.',
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          const AppCard(
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 38,
+                  child: Icon(
+                    Icons.engineering,
+                    size: 42,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'مصمم ومطور التطبيق',
+                  style: TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'حمزة الطيب',
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'مهتم بمجال الطاقة الشمسية، وله خبرة واهتمام واسع في أنظمة الطاقة الشمسية وتصميمها وتطبيقاتها العملية.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          AppCard(
+            child: Column(
+              children: [
+                const Text(
+                  'تواصل مباشر',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: openWhatsApp,
+                    icon: const Icon(Icons.chat),
+                    label: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'تواصل عبر واتساب',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: openEmail,
+                    icon: const Icon(Icons.email_outlined),
+                    label: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'اقتراح أو الإبلاغ عن مشكلة',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                const Text(
+                  'SOLARSD2090@gmail.com',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تنبيه هندسي',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'نتائج التطبيق مخصصة للمساعدة في التصميم والحسابات الأولية. يجب دائماً مراجعة Datasheet الأصلي للمعدات وتنفيذ التصميم النهائي وفق متطلبات الموقع والكود الكهربائي والحمايات المناسبة.',
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           const Center(
             child: Text(
-              'Sudan SO © 2026',
+              'Sudan SO • Solar Energy',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
+
+          const SizedBox(height: 30),
         ],
       ),
     );
   }
 }
 
-// ============================================================================
-// REUSABLE UI
-// ============================================================================
+// ============================================================
+// REUSABLE WIDGETS
+// ============================================================
 
 class AppCard extends StatelessWidget {
   final Widget child;
@@ -2897,140 +2536,113 @@ class AppCard extends StatelessWidget {
 
 class SectionTitle extends StatelessWidget {
   final String title;
-  final String? subtitle;
-  final Widget? trailing;
+  final IconData icon;
 
   const SectionTitle({
     super.key,
     required this.title,
-    this.subtitle,
-    this.trailing,
+    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
       children: [
+        Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  subtitle!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(
-                        height: 1.4,
-                      ),
-                ),
-              ],
-            ],
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        if (trailing != null) trailing!,
       ],
     );
   }
 }
 
 class MetricCard extends StatelessWidget {
-  final IconData icon;
   final String title;
   final String value;
+  final IconData icon;
 
   const MetricCard({
     super.key,
-    required this.icon,
     required this.title,
     required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            color: Theme.of(context)
-                .colorScheme
-                .primary,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(title),
-        ],
-      ),
-    );
-  }
-}
-
-class ResultCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-
-  const ResultCard({
-    super.key,
     required this.icon,
-    required this.title,
-    required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 22,
-              color: Theme.of(context)
-                  .colorScheme
-                  .primary,
+              color: Theme.of(context).colorScheme.primary,
+              size: 28,
             ),
-            const Spacer(),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 7),
             Text(
               title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+              ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ResultCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const ResultCard({
+    super.key,
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            child,
           ],
         ),
       ),
@@ -3056,47 +2668,34 @@ class ToolCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
-                  borderRadius:
-                      BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  icon,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary,
+              Icon(
+                icon,
+                size: 34,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(subtitle),
-                  ],
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
                 ),
               ),
-              const Icon(Icons.chevron_left),
             ],
           ),
         ),
@@ -3108,14 +2707,14 @@ class ToolCard extends StatelessWidget {
 class NumberField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
-  final String suffix;
+  final String? suffix;
   final ValueChanged<String>? onChanged;
 
   const NumberField({
     super.key,
     required this.controller,
     required this.label,
-    required this.suffix,
+    this.suffix,
     this.onChanged,
   });
 
@@ -3123,12 +2722,10 @@ class NumberField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      onChanged: onChanged,
-      keyboardType:
-          const TextInputType.numberWithOptions(
+      keyboardType: const TextInputType.numberWithOptions(
         decimal: true,
-        signed: true,
       ),
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,
@@ -3150,26 +2747,21 @@ class SpecRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         children: [
           Expanded(
             child: Text(
               label,
               style: const TextStyle(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.left,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-              ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -3179,113 +2771,36 @@ class SpecRow extends StatelessWidget {
 }
 
 class CheckRow extends StatelessWidget {
-  final String label;
+  final String title;
   final bool ok;
-  final String detail;
 
   const CheckRow({
     super.key,
-    required this.label,
+    required this.title,
     required this.ok,
-    required this.detail,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        ok ? Colors.green : Colors.red;
-
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
         children: [
           Icon(
-            ok
-                ? Icons.check_circle
-                : Icons.cancel,
-            color: color,
-            size: 23,
+            ok ? Icons.check_circle : Icons.cancel,
+            color: ok ? Colors.green : Colors.red,
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall,
-                ),
-              ],
+            child: Text(title),
+          ),
+          Text(
+            ok ? 'مناسب' : 'غير مناسب',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: ok ? Colors.green : Colors.red,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Widget? action;
-
-  const EmptyState({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.action,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-        ),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 42,
-            color: Theme.of(context)
-                .colorScheme
-                .primary,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-          ),
-          if (action != null) ...[
-            const SizedBox(height: 14),
-            action!,
-          ],
         ],
       ),
     );
@@ -3303,26 +2818,51 @@ class InfoBullet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-          const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            Icons.check_circle_outline,
+            Icons.check_circle,
             size: 20,
-            color: Theme.of(context)
-                .colorScheme
-                .primary,
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                height: 1.4,
-              ),
+            child: Text(text),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 60,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
             ),
           ),
         ],
